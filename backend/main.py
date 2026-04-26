@@ -20,6 +20,7 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:5175",
     "http://localhost:5176",
     "http://127.0.0.1:5176",
+    "https://london-tennis-court-monitor.vercel.app",
 ]
 
 DATA_DIR = Path(__file__).parent / "data" / "finsburySnapshots"
@@ -29,7 +30,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=False,
-    allow_methods=["GET"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 

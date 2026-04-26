@@ -2,7 +2,7 @@ export const finsburySnapshotMeta = {
   "venueName": "Finsbury Park",
   "source": "Local Playwright rendered-page investigation",
   "checkedDate": "Sunday 26 April 2026",
-  "lastCheckedAt": "2026-04-26T13:59:24.590Z",
+  "lastCheckedAt": "2026-04-26T14:01:35.182Z",
   "isLive": false,
   "disclaimer": "Static snapshot generated from local rendered-page investigation output. Not live availability. Some records may require manual validation. Always confirm and book through the official ClubSpark page.",
   "bookingUrl": "https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDate#?date=2026-04-26&role=guest"

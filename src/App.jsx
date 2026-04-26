@@ -1,5 +1,6 @@
 import React from "react";
 import { useMemo, useState } from "react";
+import FinsburySnapshot from "./components/FinsburySnapshot.jsx";
 import FilterBar from "./components/FilterBar.jsx";
 import Header from "./components/Header.jsx";
 import VenueCard from "./components/VenueCard.jsx";
@@ -83,6 +84,8 @@ function App() {
             </div>
           )}
         </section>
+
+        <FinsburySnapshot />
       </main>
     </div>
   );

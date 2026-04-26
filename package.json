@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "investigate:finsbury": "node scripts/check-finsbury-html.js",
     "investigate:finsbury:rendered": "node scripts/check-finsbury-rendered.js",
-    "investigate:finsbury:parse": "node scripts/parse-finsbury-rendered-text.js"
+    "investigate:finsbury:parse": "node scripts/parse-finsbury-rendered-text.js",
+    "investigate:finsbury:summarize": "node scripts/summarize-finsbury-candidates.js"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",

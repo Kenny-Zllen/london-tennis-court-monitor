@@ -32,10 +32,22 @@ Known URLs for manual investigation:
 
 - [https://clubspark.lta.org.uk/FinsburyPark/Booking](https://clubspark.lta.org.uk/FinsburyPark/Booking)
 - [https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDateIframe](https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDateIframe)
+- [https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDate#?date=2026-04-26&role=guest](https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDate#?date=2026-04-26&role=guest)
 
 These URLs should be reviewed manually before any automated access is considered.
 
 ## 5. Manual Investigation Checklist
+
+First manual finding:
+
+- The Finsbury Park ClubSpark booking page can be opened without login using the `BookByDate` guest URL.
+- Slot data is visible without login.
+- The page shows court, time, price, and status information.
+- The current URL uses a hash fragment: `#?date=2026-04-26&role=guest`.
+
+Technical note:
+
+Because the date parameter appears after `#`, it may not be sent to the server in a normal HTTP request. The next investigation step is to inspect the browser Network tab and identify how the slot data is made available.
 
 Before implementation, manually inspect the booking flow:
 
@@ -48,12 +60,28 @@ Before implementation, manually inspect the booking flow:
 - Check whether booking requires login
 - Check `robots.txt` and platform terms before automated access
 
+Next checklist items:
+
+- Open the `BookByDate` guest URL in a browser
+- Open the browser Network tab before changing dates
+- Reload the page and record the requests made during initial load
+- Filter for XHR/fetch requests
+- Change the date in the booking interface and record new requests
+- Check whether the hash date changes without a full page reload
+- Check whether slot data is rendered directly in HTML
+- Check whether slot data is loaded through XHR/fetch
+- Check whether slot data is embedded in JavaScript data
+- Check whether slot data is generated client-side after page load
+- Record the response format for any request that appears to contain slots
+- Confirm whether the same visible data appears when logged out or in a private window
+
 Important notes to capture during investigation:
 
 - Is the availability table visible to anonymous users?
 - Does changing the date update the URL?
 - Does changing the date trigger a network request?
 - Is slot data returned as HTML, JSON, or embedded script data?
+- Is the date passed to the server anywhere other than the hash fragment?
 - Are prices, statuses, court numbers, and times visible publicly?
 - Are there rate limits or platform warnings?
 - Does the page block automated browsers?
@@ -123,11 +151,13 @@ The initial refresh strategy should be conservative. For example, cache availabi
 
 Questions to answer before writing code:
 
-- Is Finsbury Park availability visible without logging in?
+- Is Finsbury Park availability visible without logging in? Initial manual finding: yes, for the observed guest booking URL.
 - Is the slot data public and intended for anonymous users?
 - Is the data available in HTML, JSON, or another format?
-- Do booking dates use query parameters or request payloads?
-- Are court names, prices, and booking statuses visible?
+- Do booking dates use query parameters, request payloads, or only hash fragments?
+- Are court names, prices, and booking statuses visible? Initial manual finding: yes, these are visible on the observed page.
+- Which network request, if any, provides the visible slot data?
+- Does the hash fragment date affect client-side state only?
 - What does ClubSpark's `robots.txt` allow?
 - Do ClubSpark or the venue terms permit automated access?
 - What is an acceptable cache duration?

@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "investigate:finsbury": "node scripts/check-finsbury-html.js",
+    "investigate:finsbury:rendered": "node scripts/check-finsbury-rendered.js",
+    "investigate:finsbury:parse": "node scripts/parse-finsbury-rendered-text.js"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.0",
@@ -17,6 +20,7 @@
   "devDependencies": {
     "tailwindcss": "^3.4.17",
     "postcss": "^8.4.49",
-    "autoprefixer": "^10.4.20"
+    "autoprefixer": "^10.4.20",
+    "playwright": "^1.56.0"
   }
 }

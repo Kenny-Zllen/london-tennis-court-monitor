@@ -1,4 +1,6 @@
-node_modules
-dist
+node_modules/
+dist/
+investigation-output/
 .npm-cache
+.env
 .DS_Store

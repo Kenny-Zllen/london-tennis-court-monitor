@@ -231,6 +231,65 @@ When the backend is running locally, the Finsbury Park snapshot section will try
 
 The deployed Vercel frontend still works without a deployed backend because of this static fallback. It does not fetch ClubSpark or dynamically generate new dates.
 
+### Protected Manual Refresh
+
+The backend includes a protected manual refresh endpoint:
+
+```text
+POST /api/finsbury/refresh?date=YYYY-MM-DD
+```
+
+It requires this header:
+
+```text
+X-Refresh-Token: <your-token>
+```
+
+The expected token is read from the backend environment variable:
+
+```text
+REFRESH_TOKEN
+```
+
+Example local test:
+
+```bash
+REFRESH_TOKEN=dev-secret python -m uvicorn backend.main:app --reload --port 8000
+curl -X POST \
+  -H "X-Refresh-Token: dev-secret" \
+  "http://127.0.0.1:8000/api/finsbury/refresh?date=2026-04-26"
+```
+
+This endpoint is for developer use only. It loads the public booking page once, parses rendered court/time/status candidates, writes cached JSON under `backend/data/finsburySnapshots/`, and returns a summary. Normal frontend users do not trigger refreshes.
+
+### Render Deployment Settings
+
+Deploy the backend as a Render Web Service using these settings:
+
+- Root directory: `backend`
+- Build command: `pip install -r requirements.txt && playwright install chromium`
+- Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+
+Add this Render environment variable:
+
+```text
+REFRESH_TOKEN=<a-long-random-secret>
+```
+
+Render may need Playwright browser installation support for the protected refresh endpoint. If Chromium launch fails after deployment, use Render logs to confirm whether `playwright install chromium` completed successfully.
+
+The backend CORS configuration allows local Vite development origins and the deployed Vercel frontend:
+
+```text
+https://london-tennis-court-monitor.vercel.app
+```
+
+After deploying the backend, the frontend can be pointed at it with:
+
+```bash
+VITE_API_BASE_URL=https://your-render-service.onrender.com
+```
+
 ## Portfolio Value
 
 This project demonstrates practical frontend and product engineering skills:

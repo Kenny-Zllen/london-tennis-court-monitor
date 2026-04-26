@@ -4,3 +4,19 @@ investigation-output/
 .npm-cache
 .env
 .DS_Store
+
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+
+# Node / build
+node_modules/
+dist/
+
+# Generated investigation output
+investigation-output/
+
+# Environment / system
+.env
+.DS_Store

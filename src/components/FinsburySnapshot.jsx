@@ -8,6 +8,7 @@ import {
   defaultFinsburySnapshot,
   finsburySnapshots,
 } from "../data/finsburySnapshots/index.js";
+import SystemStatus from "./SystemStatus.jsx";
 
 const statusOptions = ["All", "Booked", "Unavailable", "Closed"];
 
@@ -233,7 +234,7 @@ function FinsburySnapshot() {
             </div>
           </div>
 
-          <div className="grid gap-3 text-sm sm:grid-cols-2 lg:w-80 lg:grid-cols-1">
+          <div className="grid gap-3 text-sm lg:w-80">
             <a
               className="inline-flex min-h-11 items-center justify-center rounded-md bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
               href={finsburySnapshotMeta.bookingUrl}
@@ -242,13 +243,17 @@ function FinsburySnapshot() {
             >
               Open official ClubSpark page
             </a>
-            <div className="rounded-lg border border-slate-200 bg-white p-4">
-              <p className="font-semibold text-slate-950">Last checked</p>
-              <p className="mt-1 text-slate-600">
-                {formatLastChecked(finsburySnapshotMeta.lastCheckedAt)}
-              </p>
-            </div>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <SystemStatus
+            backendConnected={dataSource === "backend"}
+            dataSource={dataSource}
+            lastCheckedAt={formatLastChecked(finsburySnapshotMeta.lastCheckedAt)}
+            recordCount={sortedSlots.length}
+            selectedDate={selectedDate}
+          />
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -271,10 +276,10 @@ function FinsburySnapshot() {
 
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Checked date
+              Last generated
             </p>
-            <p className="mt-2 font-semibold text-slate-950">
-              {finsburySnapshotMeta.checkedDate}
+            <p className="mt-2 text-sm font-semibold text-slate-950">
+              {formatLastChecked(finsburySnapshotMeta.lastCheckedAt)}
             </p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -287,10 +292,12 @@ function FinsburySnapshot() {
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Source
+              Data source
             </p>
             <p className="mt-2 text-sm font-semibold text-slate-950">
-              Local rendered-page investigation
+              {dataSource === "backend"
+                ? "FastAPI cached backend"
+                : "Static frontend fallback"}
             </p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -299,14 +306,6 @@ function FinsburySnapshot() {
             </p>
             <p className="mt-2 text-sm font-semibold text-rose-800">
               {finsburySnapshotMeta.isLive ? "Live" : "Not live"}
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Last generated
-            </p>
-            <p className="mt-2 text-sm font-semibold text-slate-950">
-              {formatLastChecked(finsburySnapshotMeta.lastCheckedAt)}
             </p>
           </div>
         </div>

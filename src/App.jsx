@@ -1,9 +1,14 @@
 import React from "react";
 import { useMemo, useState } from "react";
+import EthicalConstraints from "./components/EthicalConstraints.jsx";
 import FinsburySnapshot from "./components/FinsburySnapshot.jsx";
 import FilterBar from "./components/FilterBar.jsx";
 import Header from "./components/Header.jsx";
+import PipelineSection from "./components/PipelineSection.jsx";
+import RoadmapSection from "./components/RoadmapSection.jsx";
+import StatusCards from "./components/StatusCards.jsx";
 import VenueCard from "./components/VenueCard.jsx";
+import { defaultFinsburySnapshot } from "./data/finsburySnapshots/index.js";
 import { venues } from "./data/venues.js";
 
 function App() {
@@ -37,23 +42,22 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
+      <StatusCards
+        snapshotVenue={defaultFinsburySnapshot.meta.venueName}
+        venueCount={venues.length}
+      />
       <main>
-        <FilterBar
-          areas={areas}
-          platforms={platforms}
-          selectedArea={selectedArea}
-          selectedPlatform={selectedPlatform}
-          searchTerm={searchTerm}
-          onAreaChange={setSelectedArea}
-          onPlatformChange={setSelectedPlatform}
-          onSearchChange={setSearchTerm}
-        />
-
-        <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <section
+          className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8"
+          id="venues"
+        >
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+                Venue discovery
+              </p>
               <h2 className="text-2xl font-bold tracking-normal text-slate-950">
-                Tennis venues
+                Find London tennis venues
               </h2>
               <p className="mt-1 text-sm text-slate-600">
                 Showing {filteredVenues.length}{" "}
@@ -66,8 +70,19 @@ function App() {
             </p>
           </div>
 
+          <FilterBar
+            areas={areas}
+            platforms={platforms}
+            selectedArea={selectedArea}
+            selectedPlatform={selectedPlatform}
+            searchTerm={searchTerm}
+            onAreaChange={setSelectedArea}
+            onPlatformChange={setSelectedPlatform}
+            onSearchChange={setSearchTerm}
+          />
+
           {filteredVenues.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {filteredVenues.map((venue) => (
                 <VenueCard key={venue.id} venue={venue} />
               ))}
@@ -86,6 +101,9 @@ function App() {
         </section>
 
         <FinsburySnapshot />
+        <PipelineSection />
+        <EthicalConstraints />
+        <RoadmapSection />
       </main>
     </div>
   );

@@ -2,23 +2,25 @@ import React from "react";
 
 function VenueCard({ venue }) {
   return (
-    <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md">
+    <article className="flex h-full flex-col rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200 hover:shadow-md">
       <div className="flex-1">
         <div className="flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
+          <div>
             <h2 className="text-lg font-semibold leading-7 text-slate-950">
               {venue.name}
             </h2>
-            <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-              {venue.platform}
-            </span>
+            <p className="mt-1 text-sm font-medium text-slate-600">
+              {venue.area}
+            </p>
           </div>
-          <p className="text-sm font-medium text-slate-600">{venue.area}</p>
+          <span className="w-fit rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+            {venue.platform}
+          </span>
         </div>
 
         <dl className="mt-5 grid gap-3 text-sm">
           <div className="grid grid-cols-[7rem_1fr] gap-3 border-t border-slate-100 pt-3">
-            <dt className="font-semibold text-slate-950">Courts</dt>
+            <dt className="font-semibold text-slate-950">Court count</dt>
             <dd className="text-slate-700">{venue.courts}</dd>
           </div>
           <div className="grid grid-cols-[7rem_1fr] gap-3 border-t border-slate-100 pt-3">

@@ -20,9 +20,9 @@ The production app uses static data only. It does not run a backend, scraper, sc
    - Powers the London venue finder and official booking links.
 
 4. **Static Finsbury Park snapshot dataset**
-   - Stored in `src/data/finsburySnapshot.js`.
+   - Stored as dated files in `src/data/finsburySnapshots/`.
    - Contains parsed candidate records from local investigation output.
-   - Displayed as a static daily snapshot, not live availability.
+   - Displayed as pre-generated static snapshots, not live availability.
 
 5. **Local-only investigation scripts**
    - Stored in `scripts/`.

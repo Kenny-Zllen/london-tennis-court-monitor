@@ -24,6 +24,7 @@ This project is intentionally scoped as a discovery and portfolio tool. It is no
 - Official booking page links
 - Empty states for unmatched filters
 - Experimental Finsbury Park static daily snapshot
+- Static snapshot date selector for pre-generated dates
 - Snapshot records grouped by court
 - Snapshot records sorted by start time
 - Snapshot filters for court and status
@@ -41,7 +42,9 @@ This project is intentionally scoped as a discovery and portfolio tool. It is no
 
 MVP v2 includes an experimental static daily booking-status snapshot for Finsbury Park.
 
-The snapshot uses all 78 parsed candidate records from a local rendered-page investigation output. Records are displayed in the frontend as a static dataset, grouped by court and sorted by slot start time.
+The snapshot uses parsed candidate records from local rendered-page investigation output. Records are displayed in the frontend as static datasets, grouped by court and sorted by slot start time.
+
+Multiple pre-generated snapshot dates can be included in `src/data/finsburySnapshots/`. The frontend date selector only switches between those bundled static files.
 
 The snapshot shows:
 
@@ -141,6 +144,32 @@ npm run preview
 ```
 
 Optional local investigation scripts are available for development research only. They are not required to run the frontend.
+
+Update the static Finsbury Park snapshot for a selected date:
+
+```bash
+npm run update:finsbury:snapshot -- --date=2026-04-27
+```
+
+This writes a dated static snapshot file such as:
+
+```text
+src/data/finsburySnapshots/2026-04-27.js
+```
+
+It also updates:
+
+```text
+src/data/finsburySnapshots/index.js
+```
+
+If no date is provided, the updater uses today's date:
+
+```bash
+npm run update:finsbury:snapshot
+```
+
+Changing the snapshot date requires running the local updater and redeploying or pushing the generated static data. The production website does not fetch new dates dynamically.
 
 ## Portfolio Value
 

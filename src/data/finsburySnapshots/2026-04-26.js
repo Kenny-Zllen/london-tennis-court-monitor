@@ -1,8 +1,9 @@
 export const finsburySnapshotMeta = {
   "venueName": "Finsbury Park",
   "source": "Local Playwright rendered-page investigation",
-  "checkedDate": "Sunday 26 April 2026",
-  "lastCheckedAt": "2026-04-26T14:03:53.416Z",
+  "checkedDate": "2026-04-26",
+  "sourceUrl": "https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDate#?date=2026-04-26&role=guest",
+  "lastCheckedAt": "2026-04-26T18:48:32.308Z",
   "isLive": false,
   "disclaimer": "Static snapshot generated from local rendered-page investigation output. Not live availability. Some records may require manual validation. Always confirm and book through the official ClubSpark page.",
   "bookingUrl": "https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDate#?date=2026-04-26&role=guest"
@@ -112,6 +113,12 @@ export const finsburySnapshot = [
     "confidence": "medium"
   },
   {
+    "court": "Court 2",
+    "timeRange": "20:00 - 21:00",
+    "status": "Booked",
+    "confidence": "medium"
+  },
+  {
     "court": "Court 3",
     "timeRange": "07:00 - 08:00",
     "status": "Unavailable",
@@ -156,6 +163,12 @@ export const finsburySnapshot = [
   {
     "court": "Court 3",
     "timeRange": "18:00 - 20:00",
+    "status": "Booked",
+    "confidence": "medium"
+  },
+  {
+    "court": "Court 3",
+    "timeRange": "20:00 - 21:00",
     "status": "Booked",
     "confidence": "medium"
   },

@@ -1,9 +1,9 @@
 import React from "react";
 import { useMemo, useState } from "react";
 import {
-  finsburySnapshot,
-  finsburySnapshotMeta,
-} from "../data/finsburySnapshot.js";
+  defaultFinsburySnapshot,
+  finsburySnapshots,
+} from "../data/finsburySnapshots/index.js";
 
 const statusOptions = ["All", "Booked", "Unavailable", "Closed"];
 
@@ -31,8 +31,18 @@ function formatLastChecked(value) {
 }
 
 function FinsburySnapshot() {
+  const [selectedDate, setSelectedDate] = useState(
+    defaultFinsburySnapshot.date,
+  );
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedCourt, setSelectedCourt] = useState("All");
+
+  const selectedSnapshot =
+    finsburySnapshots.find((snapshot) => snapshot.date === selectedDate) ||
+    defaultFinsburySnapshot;
+
+  const finsburySnapshot = selectedSnapshot.data;
+  const finsburySnapshotMeta = selectedSnapshot.meta;
 
   const sortedSlots = useMemo(
     () =>
@@ -41,7 +51,7 @@ function FinsburySnapshot() {
           getCourtNumber(first.court) - getCourtNumber(second.court) ||
           getStartMinutes(first.timeRange) - getStartMinutes(second.timeRange),
       ),
-    [],
+    [finsburySnapshot],
   );
 
   const courtOptions = useMemo(
@@ -60,7 +70,7 @@ function FinsburySnapshot() {
   const summaryCounts = statusOptions.slice(1).reduce(
     (counts, status) => ({
       ...counts,
-      [status]: filteredSlots.filter((slot) => slot.status === status).length,
+      [status]: sortedSlots.filter((slot) => slot.status === status).length,
     }),
     {},
   );
@@ -73,15 +83,18 @@ function FinsburySnapshot() {
     .filter((group) => group.slots.length > 0);
 
   return (
-    <section className="border-t border-slate-200 bg-slate-50">
+    <section
+      className="border-t border-slate-200 bg-slate-50"
+      id="finsbury-snapshot"
+    >
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-3xl">
             <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
-              MVP v2 experiment
+              Static snapshot
             </p>
             <h2 className="mt-2 text-2xl font-bold text-slate-950">
-              Experimental Finsbury Park Snapshot
+              Finsbury Park Experimental Snapshot
             </h2>
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-900">
               {finsburySnapshotMeta.disclaimer}
@@ -106,13 +119,77 @@ function FinsburySnapshot() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <label className="rounded-lg border border-slate-200 bg-white p-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Snapshot date
+            </span>
+            <select
+              className="mt-2 min-h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+              value={selectedDate}
+              onChange={(event) => {
+                setSelectedDate(event.target.value);
+                setSelectedCourt("All");
+                setSelectedStatus("All");
+              }}
+            >
+              {finsburySnapshots.map((snapshot) => (
+                <option key={snapshot.date} value={snapshot.date}>
+                  {snapshot.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Total slots shown
+              Checked date
+            </p>
+            <p className="mt-2 font-semibold text-slate-950">
+              {finsburySnapshotMeta.checkedDate}
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Records parsed
             </p>
             <p className="mt-2 text-2xl font-bold text-slate-950">
-              {filteredSlots.length}
+              {sortedSlots.length}
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Source
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-950">
+              Local rendered-page investigation
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Live status
+            </p>
+            <p className="mt-2 text-sm font-semibold text-rose-800">
+              {finsburySnapshotMeta.isLive ? "Live" : "Not live"}
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Last generated
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-950">
+              {formatLastChecked(finsburySnapshotMeta.lastCheckedAt)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Total parsed records
+            </p>
+            <p className="mt-2 text-2xl font-bold text-slate-950">
+              {sortedSlots.length}
             </p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -145,7 +222,9 @@ function FinsburySnapshot() {
           <p className="max-w-2xl text-sm leading-6 text-slate-600">
             Showing {filteredSlots.length} of {sortedSlots.length} parsed
             records for {finsburySnapshotMeta.checkedDate}. Some records may
-            require manual validation. Always confirm on ClubSpark.
+            require manual validation. Only pre-generated static snapshot dates
+            are available. This is not live date switching. Always confirm on
+            ClubSpark.
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
@@ -185,18 +264,19 @@ function FinsburySnapshot() {
         {groupedSlots.length > 0 ? (
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
             {groupedSlots.map((group) => (
-              <section
+              <details
+                open
                 className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
                 key={group.court}
               >
-                <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3">
                   <h3 className="font-semibold text-slate-950">
                     {group.court}
                   </h3>
                   <span className="text-sm text-slate-600">
                     {group.slots.length} records
                   </span>
-                </div>
+                </summary>
 
                 <div className="divide-y divide-slate-100">
                   {group.slots.map((slot) => (
@@ -218,7 +298,7 @@ function FinsburySnapshot() {
                     </div>
                   ))}
                 </div>
-              </section>
+              </details>
             ))}
           </div>
         ) : (

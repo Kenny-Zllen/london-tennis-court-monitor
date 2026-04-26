@@ -1,14 +1,14 @@
 # London Tennis Court Monitor
 
-A frontend-only MVP portfolio project for discovering London tennis venues, viewing an experimental static Finsbury Park booking-status snapshot, and quickly opening official booking pages.
+A frontend-only portfolio MVP for discovering London tennis venues, filtering by booking details, and opening official booking pages.
 
 ## Project Overview
 
-London Tennis Court Monitor is a React web app that helps users browse a curated list of London tennis venues. Users can filter venues by area, booking platform, and search text, then open the relevant official booking page in a new tab.
+London Tennis Court Monitor is a React web app that helps users browse London tennis venues and quickly navigate to official booking systems.
 
-The current MVP v2 also includes an experimental Finsbury Park snapshot. This uses 78 parsed candidate records from a local rendered-page investigation output and displays them as a static daily snapshot grouped by court and sorted by start time.
+The app includes a venue finder with search, area filtering, booking platform filtering, and responsive venue cards. MVP v2 also adds an experimental Finsbury Park static daily booking-status snapshot based on local investigation output.
 
-The project is designed as a clean, practical discovery tool rather than an automated booking system. It focuses on user experience, data presentation, filtering logic, and clear product boundaries.
+This project is intentionally scoped as a discovery and portfolio tool. It is not an auto-booking bot, and it does not provide live court availability.
 
 ## Live Demo
 
@@ -16,25 +16,18 @@ The project is designed as a clean, practical discovery tool rather than an auto
 
 ## Features
 
-- Clean homepage for London tennis venue discovery
-- Static venue data stored in a dedicated data file
+- London tennis venue finder
+- Search by venue, area, platform, or facilities
 - Area filter
 - Booking platform filter
-- Search by venue, area, platform, or facilities
-- Responsive venue card layout
-- Venue details including:
-  - Venue name
-  - Area
-  - Booking platform
-  - Number of courts
-  - Booking rule
-  - Facilities
-- Official booking page button for each venue
+- Responsive venue cards
+- Official booking page links
+- Empty states for unmatched filters
 - Experimental Finsbury Park static daily snapshot
-- Snapshot records grouped by court and sorted by start time
-- Snapshot filters for status and court
-- Empty state when no venues match the filters
-- Clear MVP disclaimer about availability
+- Snapshot records grouped by court
+- Snapshot records sorted by start time
+- Snapshot filters for court and status
+- Clear availability disclaimers
 
 ## Tech Stack
 
@@ -42,62 +35,88 @@ The project is designed as a clean, practical discovery tool rather than an auto
 - React
 - JavaScript
 - Tailwind CSS
+- Vercel deployment
 
-## Current MVP Scope
+## MVP v2: Experimental Finsbury Park Snapshot
 
-This version is a frontend-only prototype using static venue data and a static Finsbury Park investigation snapshot.
+MVP v2 includes an experimental static daily booking-status snapshot for Finsbury Park.
 
-The MVP includes:
+The snapshot uses all 78 parsed candidate records from a local rendered-page investigation output. Records are displayed in the frontend as a static dataset, grouped by court and sorted by slot start time.
 
-- A curated list of example London tennis venues
-- Client-side filtering and search
-- Reusable React components
-- Links to official venue booking pages
-- A static Finsbury Park daily snapshot using all 78 parsed candidate records from local investigation output
-- Grouped snapshot presentation by court, sorted by slot start time
-- Responsive styling with Tailwind CSS
+The snapshot shows:
 
-The production frontend does not request ClubSpark and does not perform live scraping or monitoring. No backend services, database, scheduler, user accounts, maps, notifications, alerting, payments, login flow, or booking automation are included.
+- Court
+- Time range
+- Booking status
+
+Price is intentionally excluded because parser validation found that price association may be unreliable near court boundaries.
+
+This section is not live availability. The frontend does not request ClubSpark or any booking platform. Users must always confirm availability and book through the official ClubSpark page.
+
+## Investigation Workflow
+
+The Finsbury Park snapshot came from a local-only investigation workflow:
+
+- Manual review of the public ClubSpark booking page
+- Raw HTML check to see whether slot data appeared in the page response
+- Rendered-page investigation to confirm slot-like text appeared after JavaScript rendering
+- Local parser prototype to extract candidate court, time, and status records from saved rendered text
+- Local summary script to validate candidate counts and highlight parser risks
+- Manual decision to exclude price from the frontend snapshot
+
+These investigation scripts are not part of the production frontend and are not used for live monitoring.
+
+## Ethical Constraints
+
+This project keeps clear boundaries:
+
+- No auto-booking
+- No login bypassing
+- No frontend requests to ClubSpark
+- No production scraper
+- No scheduler or repeated polling
+- No alerts or notifications
+- No payment handling
+- Users are redirected to official booking pages
+
+Any future availability work should remain conservative, transparent, and aligned with booking platform terms.
 
 ## Limitations
 
-This MVP does not show live court availability.
+This app does not show live court availability.
 
-The Finsbury Park section is a static daily snapshot generated from local rendered-page investigation output. It is useful for demonstrating a possible product direction, but it may be incomplete or outdated.
+The Finsbury Park snapshot is static and may be incomplete or outdated. It is based on local investigation output, not a live data feed.
 
-Users must always confirm availability, booking rules, and court details through the official ClubSpark page before booking.
+The production app does not include:
 
-Price is intentionally excluded from the frontend snapshot because parser validation found that price association may be unreliable near court boundaries. Some venue details may use placeholder text such as "Check official page" where exact information should be verified directly with the provider.
+- Backend services
+- Database
+- Scraping
+- Scheduled checks
+- Alerting
+- Login
+- Maps
+- Auto-booking
+- Real-time monitoring
 
-The app does not:
-
-- Scrape booking websites
-- Automatically reserve courts
-- Log users in to booking platforms
-- Store user data
-- Send alerts or notifications
-- Run scheduled checks
-- Process payments
-- Display real-time availability
+Users must confirm availability, prices, booking rules, and court details through the official venue booking page.
 
 ## Future Roadmap
 
 Possible future improvements include:
 
-- Expanding the venue dataset
-- Improving data quality with verified venue information
-- Adding more detailed facility tags
+- Expanding and verifying the London venue dataset
+- Improving venue detail quality
+- Adding richer facility tags
 - Adding sorting options
-- Adding a map view
-- Adding saved favourites
-- Adding user-friendly notes about booking windows
 - Improving the Finsbury Park parser validation workflow
 - Investigating whether structured availability data can be accessed responsibly
-- Exploring a backend service only if live availability can be handled ethically, conservatively, and in line with venue platform terms
+- Adding clearer stale-data handling if future snapshots are updated manually
+- Considering a backend only if live availability can be handled ethically, conservatively, and in line with platform terms
 
 ## How to Run Locally
 
-Clone the repository and install dependencies:
+Install dependencies:
 
 ```bash
 npm install
@@ -121,19 +140,19 @@ Preview the production build:
 npm run preview
 ```
 
+Optional local investigation scripts are available for development research only. They are not required to run the frontend.
+
 ## Portfolio Value
 
-This project demonstrates practical frontend engineering skills through a focused, real-world product idea.
+This project demonstrates practical frontend and product engineering skills:
 
-It shows the ability to:
+- Turning a real user problem into a focused MVP
+- Building reusable React components
+- Structuring static data cleanly
+- Implementing client-side search and filtering
+- Designing responsive UI with Tailwind CSS
+- Presenting investigation-derived data responsibly
+- Communicating technical and ethical limitations clearly
+- Avoiding overclaims about live availability or automation
 
-- Translate a user problem into a simple product experience
-- Build a React app with reusable components
-- Organise static data cleanly
-- Implement client-side filtering and search
-- Present investigation-derived data without overclaiming it as live availability
-- Design responsive layouts with Tailwind CSS
-- Communicate MVP scope and limitations clearly
-- Avoid overclaiming functionality that does not exist yet
-
-For an engineering/software portfolio, the project highlights structured thinking, product judgement, and the ability to build a useful prototype with clear technical boundaries.
+For an engineering/software portfolio, the project shows product judgement, systems thinking, and the ability to balance a useful user experience with responsible technical boundaries.

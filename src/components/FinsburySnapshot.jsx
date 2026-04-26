@@ -22,6 +22,14 @@ function getStartMinutes(timeRange) {
   return hours * 60 + minutes;
 }
 
+function formatLastChecked(value) {
+  return new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/London",
+  }).format(new Date(value));
+}
+
 function FinsburySnapshot() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedCourt, setSelectedCourt] = useState("All");
@@ -76,7 +84,7 @@ function FinsburySnapshot() {
               Experimental Finsbury Park Snapshot
             </h2>
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-900">
-              {finsburySnapshotMeta.description}
+              {finsburySnapshotMeta.disclaimer}
             </div>
           </div>
 
@@ -92,7 +100,7 @@ function FinsburySnapshot() {
             <div className="rounded-lg border border-slate-200 bg-white p-4">
               <p className="font-semibold text-slate-950">Last checked</p>
               <p className="mt-1 text-slate-600">
-                {finsburySnapshotMeta.lastChecked}
+                {formatLastChecked(finsburySnapshotMeta.lastCheckedAt)}
               </p>
             </div>
           </div>

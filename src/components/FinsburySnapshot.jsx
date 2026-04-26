@@ -1,5 +1,9 @@
 import React from "react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  fetchFinsburySnapshot,
+  fetchFinsburySnapshotDates,
+} from "../api/finsburyApi.js";
 import {
   defaultFinsburySnapshot,
   finsburySnapshots,
@@ -12,6 +16,17 @@ const statusStyles = {
   Unavailable: "bg-amber-100 text-amber-800 ring-amber-200",
   Closed: "bg-rose-100 text-rose-800 ring-rose-200",
 };
+
+function formatDateLabel(dateString) {
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
+}
 
 function getCourtNumber(court) {
   return Number(court.match(/\d+/)?.[0] || 999);
@@ -31,18 +46,122 @@ function formatLastChecked(value) {
 }
 
 function FinsburySnapshot() {
+  const staticSnapshots = useMemo(() => finsburySnapshots, []);
   const [selectedDate, setSelectedDate] = useState(
     defaultFinsburySnapshot.date,
   );
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedCourt, setSelectedCourt] = useState("All");
+  const [snapshotOptions, setSnapshotOptions] = useState(staticSnapshots);
+  const [snapshotPayload, setSnapshotPayload] = useState(defaultFinsburySnapshot);
+  const [dataSource, setDataSource] = useState("static");
+  const [isLoading, setIsLoading] = useState(false);
+  const [notice, setNotice] = useState("");
 
-  const selectedSnapshot =
-    finsburySnapshots.find((snapshot) => snapshot.date === selectedDate) ||
-    defaultFinsburySnapshot;
+  useEffect(() => {
+    let isCancelled = false;
 
-  const finsburySnapshot = selectedSnapshot.data;
-  const finsburySnapshotMeta = selectedSnapshot.meta;
+    async function loadBackendSnapshot() {
+      setIsLoading(true);
+
+      try {
+        const dates = await fetchFinsburySnapshotDates();
+
+        if (dates.length === 0) {
+          throw new Error("No backend snapshot dates found.");
+        }
+
+        const latestDate = dates[dates.length - 1];
+        const backendSnapshot = await fetchFinsburySnapshot(latestDate);
+
+        if (isCancelled) {
+          return;
+        }
+
+        setSnapshotOptions(
+          dates.map((date) => ({
+            date,
+            label: formatDateLabel(date),
+          })),
+        );
+        setSnapshotPayload({
+          date: latestDate,
+          label: formatDateLabel(latestDate),
+          meta: backendSnapshot.meta,
+          data: backendSnapshot.records,
+        });
+        setSelectedDate(latestDate);
+        setSelectedCourt("All");
+        setSelectedStatus("All");
+        setDataSource("backend");
+        setNotice("");
+      } catch {
+        if (isCancelled) {
+          return;
+        }
+
+        setSnapshotOptions(staticSnapshots);
+        setSnapshotPayload(defaultFinsburySnapshot);
+        setSelectedDate(defaultFinsburySnapshot.date);
+        setDataSource("static");
+        setNotice("Backend unavailable, using static fallback.");
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadBackendSnapshot();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [staticSnapshots]);
+
+  async function handleDateChange(date) {
+    setSelectedDate(date);
+    setSelectedCourt("All");
+    setSelectedStatus("All");
+
+    if (dataSource === "backend") {
+      setIsLoading(true);
+
+      try {
+        const backendSnapshot = await fetchFinsburySnapshot(date);
+
+        setSnapshotPayload({
+          date,
+          label: formatDateLabel(date),
+          meta: backendSnapshot.meta,
+          data: backendSnapshot.records,
+        });
+        setNotice("");
+      } catch {
+        const fallbackSnapshot =
+          staticSnapshots.find((snapshot) => snapshot.date === date) ||
+          defaultFinsburySnapshot;
+
+        setSnapshotOptions(staticSnapshots);
+        setSnapshotPayload(fallbackSnapshot);
+        setSelectedDate(fallbackSnapshot.date);
+        setDataSource("static");
+        setNotice("Backend unavailable, using static fallback.");
+      } finally {
+        setIsLoading(false);
+      }
+
+      return;
+    }
+
+    const staticSnapshot =
+      staticSnapshots.find((snapshot) => snapshot.date === date) ||
+      defaultFinsburySnapshot;
+    setSnapshotPayload(staticSnapshot);
+  }
+
+  const finsburySnapshot = snapshotPayload.data;
+  const finsburySnapshotMeta = snapshotPayload.meta;
 
   const sortedSlots = useMemo(
     () =>
@@ -99,6 +218,19 @@ function FinsburySnapshot() {
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-900">
               {finsburySnapshotMeta.disclaimer}
             </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                Source:{" "}
+                {dataSource === "backend"
+                  ? "FastAPI cached backend"
+                  : "Static frontend fallback"}
+              </span>
+              {notice && (
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
+                  {notice}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-3 text-sm sm:grid-cols-2 lg:w-80 lg:grid-cols-1">
@@ -127,13 +259,9 @@ function FinsburySnapshot() {
             <select
               className="mt-2 min-h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
               value={selectedDate}
-              onChange={(event) => {
-                setSelectedDate(event.target.value);
-                setSelectedCourt("All");
-                setSelectedStatus("All");
-              }}
+              onChange={(event) => handleDateChange(event.target.value)}
             >
-              {finsburySnapshots.map((snapshot) => (
+              {snapshotOptions.map((snapshot) => (
                 <option key={snapshot.date} value={snapshot.date}>
                   {snapshot.label}
                 </option>
@@ -263,6 +391,11 @@ function FinsburySnapshot() {
 
         {groupedSlots.length > 0 ? (
           <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {isLoading && (
+              <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 lg:col-span-2">
+                Loading snapshot...
+              </div>
+            )}
             {groupedSlots.map((group) => (
               <details
                 open

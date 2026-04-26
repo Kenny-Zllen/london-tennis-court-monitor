@@ -119,13 +119,25 @@ Possible future improvements include:
 
 ## How to Run Locally
 
-Install dependencies:
+Install frontend dependencies:
 
 ```bash
 npm install
 ```
 
-Start the development server:
+Create a local frontend environment file if you want to point the React app at the FastAPI backend:
+
+```bash
+cp .env.example .env
+```
+
+`.env.example` contains:
+
+```bash
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Start the frontend development server:
 
 ```bash
 npm run dev
@@ -170,6 +182,54 @@ npm run update:finsbury:snapshot
 ```
 
 Changing the snapshot date requires running the local updater and redeploying or pushing the generated static data. The production website does not fetch new dates dynamically.
+
+## Backend API Prototype
+
+The project also includes a small FastAPI backend prototype under `backend/`.
+
+The backend serves cached local JSON snapshot data only. It does not scrape ClubSpark, run Playwright from API requests, schedule checks, log users in, send alerts, or book courts.
+
+Install backend dependencies:
+
+```bash
+python -m pip install -r backend/requirements.txt
+```
+
+Run the backend locally:
+
+```bash
+python -m uvicorn backend.main:app --reload --port 8000
+```
+
+Test the health endpoint:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+List cached Finsbury Park snapshot dates:
+
+```bash
+curl http://127.0.0.1:8000/api/finsbury/snapshots
+```
+
+Fetch the latest cached snapshot:
+
+```bash
+curl http://127.0.0.1:8000/api/finsbury/snapshot
+```
+
+Fetch a specific cached snapshot date:
+
+```bash
+curl "http://127.0.0.1:8000/api/finsbury/snapshot?date=2026-04-26"
+```
+
+The backend is read-only and cache-based. Users must still confirm availability and book through the official ClubSpark page.
+
+When the backend is running locally, the Finsbury Park snapshot section will try to use the FastAPI cached backend first. If the backend is unavailable, the frontend falls back to bundled static snapshot files from `src/data/finsburySnapshots/`.
+
+The deployed Vercel frontend still works without a deployed backend because of this static fallback. It does not fetch ClubSpark or dynamically generate new dates.
 
 ## Portfolio Value
 

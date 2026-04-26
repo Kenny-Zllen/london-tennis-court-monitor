@@ -13,16 +13,35 @@ const statusStyles = {
   Closed: "bg-rose-100 text-rose-800 ring-rose-200",
 };
 
+function getCourtNumber(court) {
+  return Number(court.match(/\d+/)?.[0] || 999);
+}
+
+function getStartMinutes(timeRange) {
+  const [hours, minutes] = timeRange.split(" - ")[0].split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 function FinsburySnapshot() {
   const [selectedStatus, setSelectedStatus] = useState("All");
   const [selectedCourt, setSelectedCourt] = useState("All");
 
-  const courtOptions = useMemo(
-    () => [...new Set(finsburySnapshot.map((slot) => slot.court))],
+  const sortedSlots = useMemo(
+    () =>
+      [...finsburySnapshot].sort(
+        (first, second) =>
+          getCourtNumber(first.court) - getCourtNumber(second.court) ||
+          getStartMinutes(first.timeRange) - getStartMinutes(second.timeRange),
+      ),
     [],
   );
 
-  const filteredSlots = finsburySnapshot.filter((slot) => {
+  const courtOptions = useMemo(
+    () => [...new Set(sortedSlots.map((slot) => slot.court))],
+    [sortedSlots],
+  );
+
+  const filteredSlots = sortedSlots.filter((slot) => {
     const matchesStatus =
       selectedStatus === "All" || slot.status === selectedStatus;
     const matchesCourt = selectedCourt === "All" || slot.court === selectedCourt;
@@ -38,6 +57,13 @@ function FinsburySnapshot() {
     {},
   );
 
+  const groupedSlots = courtOptions
+    .map((court) => ({
+      court,
+      slots: filteredSlots.filter((slot) => slot.court === court),
+    }))
+    .filter((group) => group.slots.length > 0);
+
   return (
     <section className="border-t border-slate-200 bg-slate-50">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8">
@@ -50,8 +76,7 @@ function FinsburySnapshot() {
               Experimental Finsbury Park Snapshot
             </h2>
             <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium leading-6 text-amber-900">
-              Static investigation snapshot — not live availability. Always
-              confirm and book through ClubSpark.
+              {finsburySnapshotMeta.description}
             </div>
           </div>
 
@@ -65,10 +90,10 @@ function FinsburySnapshot() {
               Open official ClubSpark page
             </a>
             <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="font-semibold text-slate-950">Last checked</p>
-            <p className="mt-1 text-slate-600">
-              {finsburySnapshotMeta.lastChecked}
-            </p>
+              <p className="font-semibold text-slate-950">Last checked</p>
+              <p className="mt-1 text-slate-600">
+                {finsburySnapshotMeta.lastChecked}
+              </p>
             </div>
           </div>
         </div>
@@ -110,81 +135,93 @@ function FinsburySnapshot() {
 
         <div className="mt-5 flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-end sm:justify-between">
           <p className="max-w-2xl text-sm leading-6 text-slate-600">
-            This snapshot is based on a manually reviewed local investigation
-            sample. It may be incomplete or outdated.
+            Showing {filteredSlots.length} of {sortedSlots.length} parsed
+            records for {finsburySnapshotMeta.checkedDate}. Some records may
+            require manual validation. Always confirm on ClubSpark.
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Status
-            <select
-              className="min-h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-              value={selectedStatus}
-              onChange={(event) => setSelectedStatus(event.target.value)}
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
+              Status
+              <select
+                className="min-h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                value={selectedStatus}
+                onChange={(event) => setSelectedStatus(event.target.value)}
+              >
+                {statusOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </label>
 
             <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Court
-            <select
-              className="min-h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
-              value={selectedCourt}
-              onChange={(event) => setSelectedCourt(event.target.value)}
-            >
-              <option value="All">All courts</option>
-              {courtOptions.map((court) => (
-                <option key={court} value={court}>
-                  {court}
-                </option>
-              ))}
-            </select>
-          </label>
+              Court
+              <select
+                className="min-h-10 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium normal-case tracking-normal text-slate-950 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+                value={selectedCourt}
+                onChange={(event) => setSelectedCourt(event.target.value)}
+              >
+                <option value="All">All courts</option>
+                {courtOptions.map((court) => (
+                  <option key={court} value={court}>
+                    {court}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
         </div>
 
-        {filteredSlots.length > 0 ? (
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredSlots.map((slot) => (
-              <article
-                className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-                  key={`${slot.court}-${slot.timeRange}-${slot.status}`}
-                >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-950">
-                      {slot.court}
-                    </p>
-                    <p className="mt-2 text-xl font-bold text-slate-900">
-                      {slot.timeRange}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                      statusStyles[slot.status] ||
-                      "bg-slate-100 text-slate-700 ring-slate-200"
-                    }`}
-                  >
-                    {slot.status}
+        {groupedSlots.length > 0 ? (
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {groupedSlots.map((group) => (
+              <section
+                className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+                key={group.court}
+              >
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-4 py-3">
+                  <h3 className="font-semibold text-slate-950">
+                    {group.court}
+                  </h3>
+                  <span className="text-sm text-slate-600">
+                    {group.slots.length} records
                   </span>
                 </div>
-              </article>
-              ))}
+
+                <div className="divide-y divide-slate-100">
+                  {group.slots.map((slot) => (
+                    <div
+                      className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 text-sm"
+                      key={`${slot.court}-${slot.timeRange}-${slot.status}`}
+                    >
+                      <span className="font-medium text-slate-800">
+                        {slot.timeRange}
+                      </span>
+                      <span
+                        className={`inline-flex shrink-0 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
+                          statusStyles[slot.status] ||
+                          "bg-slate-100 text-slate-700 ring-slate-200"
+                        }`}
+                      >
+                        {slot.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         ) : (
           <div className="mt-5 rounded-lg border border-dashed border-slate-300 bg-white px-6 py-10 text-center">
-              <h3 className="text-lg font-semibold text-slate-950">
-                No snapshot records found
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Try changing the status or court filter.
-              </p>
-            </div>
+            <h3 className="text-lg font-semibold text-slate-950">
+              No snapshot records found
+            </h3>
+            <p className="mt-2 text-sm text-slate-600">
+              Try changing the status or court filter.
+            </p>
+          </div>
         )}
 
         <div className="mt-6 flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">

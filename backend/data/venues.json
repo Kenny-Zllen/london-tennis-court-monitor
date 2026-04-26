@@ -1,0 +1,38 @@
+[
+  {
+    "id": "finsbury-park",
+    "name": "Finsbury Park",
+    "area": "Haringey",
+    "bookingPlatform": "ClubSpark",
+    "officialBookingUrl": "https://clubspark.lta.org.uk/FinsburyPark/Booking",
+    "snapshotSupported": true,
+    "refreshSupported": true
+  },
+  {
+    "id": "lee-valley",
+    "name": "Lee Valley Hockey and Tennis Centre",
+    "area": "Queen Elizabeth Olympic Park",
+    "bookingPlatform": "Better",
+    "officialBookingUrl": "https://www.better.org.uk/leisure-centre/lee-valley/hockey-and-tennis-centre",
+    "snapshotSupported": false,
+    "refreshSupported": false
+  },
+  {
+    "id": "clapham-common",
+    "name": "Clapham Common",
+    "area": "Lambeth",
+    "bookingPlatform": "ClubSpark",
+    "officialBookingUrl": "https://clubspark.lta.org.uk/ClaphamCommon/Booking",
+    "snapshotSupported": false,
+    "refreshSupported": false
+  },
+  {
+    "id": "wimbledon-park",
+    "name": "Wimbledon Park",
+    "area": "Wandsworth",
+    "bookingPlatform": "Enable",
+    "officialBookingUrl": "https://enablelc.org/parks/wimbledon-park/",
+    "snapshotSupported": false,
+    "refreshSupported": false
+  }
+]

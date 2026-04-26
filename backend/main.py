@@ -9,8 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="London Tennis Court Monitor API",
-    description="Read-only API for cached local Finsbury Park snapshot data.",
-    version="0.1.0",
+    description="API for cached local tennis venue snapshot data.",
+    version="0.2.0",
 )
 
 ALLOWED_ORIGINS = [
@@ -25,7 +25,12 @@ ALLOWED_ORIGINS = [
     "https://london-tennis-court-monitor.vercel.app",
 ]
 
-DATA_DIR = Path(__file__).parent / "data" / "finsburySnapshots"
+BACKEND_DATA_DIR = Path(__file__).parent / "data"
+VENUE_REGISTRY_PATH = BACKEND_DATA_DIR / "venues.json"
+FINSBURY_DATA_DIR = BACKEND_DATA_DIR / "finsburySnapshots"
+VENUE_DATA_DIRS = {
+    "finsbury-park": FINSBURY_DATA_DIR,
+}
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 COURT_HEADING_PATTERN = re.compile(r"^Court\s+\d+(?:\s+\(.+\))?$")
 TIME_RANGE_PATTERN = re.compile(r"^(?:at\s+)?(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$")
@@ -36,6 +41,7 @@ SNAPSHOT_DISCLAIMER = (
     "Some records may require manual validation. Always confirm and book "
     "through the official ClubSpark page."
 )
+FINSBURY_VENUE_ID = "finsbury-park"
 
 app.add_middleware(
     CORSMiddleware,
@@ -46,13 +52,53 @@ app.add_middleware(
 )
 
 
-def get_snapshot_dates() -> list[str]:
-    if not DATA_DIR.exists():
+def load_venue_registry() -> list[dict]:
+    if not VENUE_REGISTRY_PATH.exists():
+        return []
+
+    with VENUE_REGISTRY_PATH.open("r", encoding="utf-8") as file:
+        return json.load(file)
+
+
+def get_venue(venue_id: str) -> dict:
+    for venue in load_venue_registry():
+        if venue.get("id") == venue_id:
+            return venue
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"Venue '{venue_id}' was not found.",
+    )
+
+
+def require_snapshot_supported(venue_id: str) -> dict:
+    venue = get_venue(venue_id)
+
+    if not venue.get("snapshotSupported"):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Cached snapshots are not available for {venue['name']} yet.",
+        )
+
+    if venue_id not in VENUE_DATA_DIRS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No cached snapshot data directory is configured for {venue['name']}.",
+        )
+
+    return venue
+
+
+def get_snapshot_dates_for_venue(venue_id: str) -> list[str]:
+    require_snapshot_supported(venue_id)
+    data_dir = VENUE_DATA_DIRS[venue_id]
+
+    if not data_dir.exists():
         return []
 
     return sorted(
         path.stem
-        for path in DATA_DIR.glob("*.json")
+        for path in data_dir.glob("*.json")
         if DATE_PATTERN.match(path.stem)
     )
 
@@ -75,13 +121,14 @@ def validate_date_string(date_value: str) -> str:
     return date_value
 
 
-def load_snapshot(date: str) -> dict:
-    snapshot_path = DATA_DIR / f"{date}.json"
+def load_snapshot_for_venue(venue_id: str, date: str) -> dict:
+    venue = require_snapshot_supported(venue_id)
+    snapshot_path = VENUE_DATA_DIRS[venue_id] / f"{date}.json"
 
     if not snapshot_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"No cached Finsbury Park snapshot found for {date}.",
+            detail=f"No cached {venue['name']} snapshot found for {date}.",
         )
 
     with snapshot_path.open("r", encoding="utf-8") as file:
@@ -184,6 +231,22 @@ def count_by(records: list[dict], field: str) -> dict:
     return counts
 
 
+def require_valid_refresh_token(refresh_token: str | None) -> None:
+    expected_token = os.getenv("REFRESH_TOKEN")
+
+    if not expected_token:
+        raise HTTPException(
+            status_code=500,
+            detail="REFRESH_TOKEN is not configured on the backend server.",
+        )
+
+    if not refresh_token or refresh_token != expected_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized refresh request.",
+        )
+
+
 def refresh_snapshot(date_value: str) -> dict:
     try:
         from playwright.sync_api import sync_playwright
@@ -228,8 +291,8 @@ def refresh_snapshot(date_value: str) -> dict:
         "records": records,
     }
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    snapshot_path = DATA_DIR / f"{date_value}.json"
+    FINSBURY_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    snapshot_path = FINSBURY_DATA_DIR / f"{date_value}.json"
 
     with snapshot_path.open("w", encoding="utf-8") as file:
         json.dump(snapshot, file, indent=2)
@@ -250,29 +313,77 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-@app.get("/api/finsbury/snapshots")
-def list_finsbury_snapshots() -> dict:
+@app.get("/api/venues")
+def list_venues() -> dict:
+    return {"venues": load_venue_registry()}
+
+
+@app.get("/api/venues/{venue_id}/snapshots")
+def list_venue_snapshots(venue_id: str) -> dict:
+    venue = require_snapshot_supported(venue_id)
+
     return {
-        "venue": "Finsbury Park",
-        "availableDates": get_snapshot_dates(),
+        "venue": venue["name"],
+        "venueId": venue["id"],
+        "availableDates": get_snapshot_dates_for_venue(venue_id),
     }
 
 
-@app.get("/api/finsbury/snapshot")
-def get_finsbury_snapshot(date: str | None = Query(default=None)) -> dict:
-    available_dates = get_snapshot_dates()
+@app.get("/api/venues/{venue_id}/snapshot")
+def get_venue_snapshot(
+    venue_id: str,
+    date: str | None = Query(default=None),
+) -> dict:
+    venue = require_snapshot_supported(venue_id)
+    available_dates = get_snapshot_dates_for_venue(venue_id)
 
     if not available_dates:
         raise HTTPException(
             status_code=404,
-            detail="No cached Finsbury Park snapshots are available.",
+            detail=f"No cached {venue['name']} snapshots are available.",
         )
 
     selected_date = date or available_dates[-1]
 
     validate_date_string(selected_date)
 
-    return load_snapshot(selected_date)
+    return load_snapshot_for_venue(venue_id, selected_date)
+
+
+@app.post("/api/venues/{venue_id}/refresh")
+def refresh_venue_snapshot(
+    venue_id: str,
+    date: str | None = Query(default=None),
+    refresh_token: str | None = Header(default=None, alias="X-Refresh-Token"),
+) -> dict:
+    require_valid_refresh_token(refresh_token)
+
+    venue = get_venue(venue_id)
+
+    if not venue.get("refreshSupported"):
+        raise HTTPException(
+            status_code=501,
+            detail="Refresh is not implemented for this venue yet.",
+        )
+
+    if venue_id != FINSBURY_VENUE_ID:
+        raise HTTPException(
+            status_code=501,
+            detail="Refresh is not implemented for this venue yet.",
+        )
+
+    selected_date = validate_date_string(date or datetime.utcnow().date().isoformat())
+    return refresh_snapshot(selected_date)
+
+
+@app.get("/api/finsbury/snapshots")
+def list_finsbury_snapshots() -> dict:
+    return list_venue_snapshots(FINSBURY_VENUE_ID)
+
+
+@app.get("/api/finsbury/snapshot")
+def get_finsbury_snapshot(date: str | None = Query(default=None)) -> dict:
+    return get_venue_snapshot(FINSBURY_VENUE_ID, date)
 
 
 @app.post("/api/finsbury/refresh")
@@ -280,19 +391,4 @@ def refresh_finsbury_snapshot(
     date: str | None = Query(default=None),
     refresh_token: str | None = Header(default=None, alias="X-Refresh-Token"),
 ) -> dict:
-    expected_token = os.getenv("REFRESH_TOKEN")
-
-    if not expected_token:
-        raise HTTPException(
-            status_code=500,
-            detail="REFRESH_TOKEN is not configured on the backend server.",
-        )
-
-    if not refresh_token or refresh_token != expected_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Unauthorized refresh request.",
-        )
-
-    selected_date = validate_date_string(date or datetime.utcnow().date().isoformat())
-    return refresh_snapshot(selected_date)
+    return refresh_venue_snapshot(FINSBURY_VENUE_ID, date, refresh_token)

@@ -1,12 +1,12 @@
 # London Tennis Court Monitor
 
-A frontend-only portfolio MVP for discovering London tennis venues, filtering by booking details, and opening official booking pages.
+A portfolio MVP for discovering London tennis venues, filtering by booking details, and opening official booking pages. The frontend is deployed on Vercel, and the optional FastAPI backend serves cached snapshot data only.
 
 ## Project Overview
 
 London Tennis Court Monitor is a React web app that helps users browse London tennis venues and quickly navigate to official booking systems.
 
-The app includes a venue finder with search, area filtering, booking platform filtering, and responsive venue cards. MVP v2 also adds an experimental Finsbury Park static daily booking-status snapshot based on local investigation output.
+The app includes a venue finder with search, area filtering, booking platform filtering, and responsive venue cards. It also includes an experimental Finsbury Park daily booking-status snapshot based on cached investigation output.
 
 This project is intentionally scoped as a discovery and portfolio tool. It is not an auto-booking bot, and it does not provide live court availability.
 
@@ -28,6 +28,9 @@ This project is intentionally scoped as a discovery and portfolio tool. It is no
 - Snapshot records grouped by court
 - Snapshot records sorted by start time
 - Snapshot filters for court and status
+- FastAPI cached-data backend with static frontend fallback
+- Multi-venue backend registry
+- Protected manual refresh endpoint for supported venues
 - Clear availability disclaimers
 
 ## Tech Stack
@@ -36,11 +39,13 @@ This project is intentionally scoped as a discovery and portfolio tool. It is no
 - React
 - JavaScript
 - Tailwind CSS
+- FastAPI
 - Vercel deployment
+- Render backend deployment
 
 ## MVP v2: Experimental Finsbury Park Snapshot
 
-MVP v2 includes an experimental static daily booking-status snapshot for Finsbury Park.
+The app includes an experimental static daily booking-status snapshot for Finsbury Park.
 
 The snapshot uses parsed candidate records from local rendered-page investigation output. Records are displayed in the frontend as static datasets, grouped by court and sorted by slot start time.
 
@@ -56,18 +61,51 @@ Price is intentionally excluded because parser validation found that price assoc
 
 This section is not live availability. The frontend does not request ClubSpark or any booking platform. Users must always confirm availability and book through the official ClubSpark page.
 
+## MVP v8: Multi-Venue Backend Architecture
+
+MVP v8 adds a venue-based backend API structure while keeping Finsbury Park as the only fully supported snapshot venue.
+
+The backend now has a venue registry at `backend/data/venues.json`. The registry lists venues with IDs, names, areas, booking platforms, official booking URLs, and whether cached snapshots or protected refreshes are supported.
+
+Current support status:
+
+- Finsbury Park: cached snapshots supported, protected manual refresh supported
+- Lee Valley Hockey and Tennis Centre: registry-only
+- Clapham Common: registry-only
+- Wimbledon Park: registry-only
+
+The general backend endpoints are:
+
+```text
+GET /api/venues
+GET /api/venues/{venue_id}/snapshots
+GET /api/venues/{venue_id}/snapshot?date=YYYY-MM-DD
+POST /api/venues/{venue_id}/refresh?date=YYYY-MM-DD
+```
+
+The older Finsbury-specific endpoints still work as backwards-compatible aliases:
+
+```text
+GET /api/finsbury/snapshots
+GET /api/finsbury/snapshot?date=YYYY-MM-DD
+POST /api/finsbury/refresh?date=YYYY-MM-DD
+```
+
+Protected refresh is currently implemented only for `finsbury-park`. Other venues are listed for future expansion, but they do not have cached snapshot parsing or refresh workflows yet.
+
 ## Investigation Workflow
 
-The Finsbury Park snapshot came from a local-only investigation workflow:
+The Finsbury Park snapshot came from an investigation workflow:
 
 - Manual review of the public ClubSpark booking page
 - Raw HTML check to see whether slot data appeared in the page response
 - Rendered-page investigation to confirm slot-like text appeared after JavaScript rendering
 - Local parser prototype to extract candidate court, time, and status records from saved rendered text
 - Local summary script to validate candidate counts and highlight parser risks
+- Optional protected backend refresh that can manually regenerate cached Finsbury Park JSON
 - Manual decision to exclude price from the frontend snapshot
 
-These investigation scripts are not part of the production frontend and are not used for live monitoring.
+These investigation scripts are not part of the production frontend and are not used for live monitoring. Normal frontend visits do not trigger Playwright or ClubSpark requests.
 
 ## Ethical Constraints
 
@@ -76,7 +114,7 @@ This project keeps clear boundaries:
 - No auto-booking
 - No login bypassing
 - No frontend requests to ClubSpark
-- No production scraper
+- No public production scraping
 - No scheduler or repeated polling
 - No alerts or notifications
 - No payment handling
@@ -92,9 +130,7 @@ The Finsbury Park snapshot is static and may be incomplete or outdated. It is ba
 
 The production app does not include:
 
-- Backend services
-- Database
-- Scraping
+- Live scraping
 - Scheduled checks
 - Alerting
 - Login
@@ -187,7 +223,7 @@ Changing the snapshot date requires running the local updater and redeploying or
 
 The project also includes a small FastAPI backend prototype under `backend/`.
 
-The backend serves cached local JSON snapshot data only. It does not scrape ClubSpark, run Playwright from API requests, schedule checks, log users in, send alerts, or book courts.
+The backend serves cached local JSON snapshot data only for normal GET requests. It does not scrape ClubSpark when users visit the frontend, schedule checks, log users in, send alerts, or book courts.
 
 Install backend dependencies:
 
@@ -213,6 +249,18 @@ List cached Finsbury Park snapshot dates:
 curl http://127.0.0.1:8000/api/finsbury/snapshots
 ```
 
+List all registered backend venues:
+
+```bash
+curl http://127.0.0.1:8000/api/venues
+```
+
+List cached snapshot dates for a venue:
+
+```bash
+curl http://127.0.0.1:8000/api/venues/finsbury-park/snapshots
+```
+
 Fetch the latest cached snapshot:
 
 ```bash
@@ -225,7 +273,13 @@ Fetch a specific cached snapshot date:
 curl "http://127.0.0.1:8000/api/finsbury/snapshot?date=2026-04-26"
 ```
 
-The backend is read-only and cache-based. Users must still confirm availability and book through the official ClubSpark page.
+The venue-based equivalent is:
+
+```bash
+curl "http://127.0.0.1:8000/api/venues/finsbury-park/snapshot?date=2026-04-26"
+```
+
+Normal backend reads are cache-based. Users must still confirm availability and book through the official ClubSpark page.
 
 When the backend is running locally, the Finsbury Park snapshot section will try to use the FastAPI cached backend first. If the backend is unavailable, the frontend falls back to bundled static snapshot files from `src/data/finsburySnapshots/`.
 
@@ -237,6 +291,12 @@ The backend includes a protected manual refresh endpoint:
 
 ```text
 POST /api/finsbury/refresh?date=YYYY-MM-DD
+```
+
+The venue-based refresh endpoint is:
+
+```text
+POST /api/venues/finsbury-park/refresh?date=YYYY-MM-DD
 ```
 
 It requires this header:
@@ -257,10 +317,10 @@ Example local test:
 REFRESH_TOKEN=dev-secret python -m uvicorn backend.main:app --reload --port 8000
 curl -X POST \
   -H "X-Refresh-Token: dev-secret" \
-  "http://127.0.0.1:8000/api/finsbury/refresh?date=2026-04-26"
+  "http://127.0.0.1:8000/api/venues/finsbury-park/refresh?date=2026-04-26"
 ```
 
-This endpoint is for developer use only. It loads the public booking page once, parses rendered court/time/status candidates, writes cached JSON under `backend/data/finsburySnapshots/`, and returns a summary. Normal frontend users do not trigger refreshes.
+This endpoint is for developer use only. For Finsbury Park, it loads the public booking page once, parses rendered court/time/status candidates, writes cached JSON under `backend/data/finsburySnapshots/`, and returns a summary. Normal frontend users do not trigger refreshes.
 
 ### Render Deployment Settings
 

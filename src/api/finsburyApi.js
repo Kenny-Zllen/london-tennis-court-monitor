@@ -12,11 +12,24 @@ async function getJson(path) {
 }
 
 export async function fetchFinsburySnapshotDates() {
-  const data = await getJson("/api/finsbury/snapshots");
-  return data.availableDates || [];
+  return fetchVenueSnapshotDates("finsbury-park");
 }
 
 export async function fetchFinsburySnapshot(date) {
+  return fetchVenueSnapshot("finsbury-park", date);
+}
+
+export async function fetchVenues() {
+  const data = await getJson("/api/venues");
+  return data.venues || [];
+}
+
+export async function fetchVenueSnapshotDates(venueId) {
+  const data = await getJson(`/api/venues/${venueId}/snapshots`);
+  return data.availableDates || [];
+}
+
+export async function fetchVenueSnapshot(venueId, date) {
   const query = date ? `?date=${encodeURIComponent(date)}` : "";
-  return getJson(`/api/finsbury/snapshot${query}`);
+  return getJson(`/api/venues/${venueId}/snapshot${query}`);
 }

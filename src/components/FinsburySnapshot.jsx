@@ -1,8 +1,8 @@
 import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import {
-  fetchFinsburySnapshot,
-  fetchFinsburySnapshotDates,
+  fetchVenueSnapshot,
+  fetchVenueSnapshotDates,
 } from "../api/finsburyApi.js";
 import {
   defaultFinsburySnapshot,
@@ -11,6 +11,7 @@ import {
 import SystemStatus from "./SystemStatus.jsx";
 
 const statusOptions = ["All", "Booked", "Unavailable", "Closed"];
+const supportedVenueId = "finsbury-park";
 
 const statusStyles = {
   Booked: "bg-slate-100 text-slate-700 ring-slate-200",
@@ -66,14 +67,17 @@ function FinsburySnapshot() {
       setIsLoading(true);
 
       try {
-        const dates = await fetchFinsburySnapshotDates();
+        const dates = await fetchVenueSnapshotDates(supportedVenueId);
 
         if (dates.length === 0) {
           throw new Error("No backend snapshot dates found.");
         }
 
         const latestDate = dates[dates.length - 1];
-        const backendSnapshot = await fetchFinsburySnapshot(latestDate);
+        const backendSnapshot = await fetchVenueSnapshot(
+          supportedVenueId,
+          latestDate,
+        );
 
         if (isCancelled) {
           return;
@@ -129,7 +133,10 @@ function FinsburySnapshot() {
       setIsLoading(true);
 
       try {
-        const backendSnapshot = await fetchFinsburySnapshot(date);
+        const backendSnapshot = await fetchVenueSnapshot(
+          supportedVenueId,
+          date,
+        );
 
         setSnapshotPayload({
           date,
@@ -225,6 +232,9 @@ function FinsburySnapshot() {
                 {dataSource === "backend"
                   ? "FastAPI cached backend"
                   : "Static frontend fallback"}
+              </span>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                Supported venue: Finsbury Park
               </span>
               {notice && (
                 <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">

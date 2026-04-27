@@ -9,7 +9,7 @@ Never import from the frontend.
 from __future__ import annotations
 
 import os
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -49,7 +49,7 @@ def upsert_slot_and_log_event(slot: dict) -> bool:
       court, activity, status, price_pence, spaces, source_status
     """
     db = get_db()
-    now_iso = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f") + "Z"
 
     venue_id = slot["venue_id"]
     slot_date = slot["slot_date"]

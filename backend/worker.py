@@ -26,7 +26,7 @@ import os
 import random
 import sys
 import time
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from dotenv import load_dotenv
 
@@ -66,7 +66,7 @@ def cycle(dates_ahead: int, only_venue: str | None) -> None:
     target_dates = [(today + timedelta(days=i)).isoformat() for i in range(dates_ahead)]
 
     print(
-        f"\n=== cycle {datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%S')}Z  "
+        f"\n=== cycle {datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S')}Z  "
         f"venues={len(venues)} dates={target_dates} ==="
     )
 

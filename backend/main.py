@@ -501,11 +501,21 @@ def list_venues() -> dict:
 @app.get("/api/venues/{venue_id}/snapshots")
 def list_venue_snapshots(venue_id: str) -> dict:
     venue = require_snapshot_supported(venue_id)
+    available_dates = get_snapshot_dates_for_venue(venue_id)
+    latest_date = available_dates[-1] if available_dates else None
+    record_count = 0
+
+    if latest_date:
+        latest_snapshot = load_snapshot_for_venue(venue_id, latest_date)
+        record_count = len(latest_snapshot.get("records", []))
 
     return {
         "venue": venue["name"],
         "venueId": venue["id"],
-        "availableDates": get_snapshot_dates_for_venue(venue_id),
+        "venueName": venue["name"],
+        "availableDates": available_dates,
+        "latestDate": latest_date,
+        "recordCount": record_count,
     }
 
 

@@ -4,7 +4,7 @@
 
 London Tennis Court Monitor is a React + Vite frontend deployed on Vercel with a small FastAPI backend deployed on Render.
 
-The production frontend does not request ClubSpark directly. Normal backend GET requests serve cached JSON snapshot data only. Playwright is used only by a protected manual refresh endpoint for supported venues.
+The production frontend does not request booking platforms directly. Normal backend GET requests serve cached JSON snapshot data only. External booking data is requested only by protected manual refresh endpoints for supported venues.
 
 ## Components
 
@@ -33,7 +33,7 @@ The production frontend does not request ClubSpark directly. Normal backend GET 
 6. **Backend venue registry**
    - Stored in `backend/data/venues.json`.
    - Lists venue IDs, names, areas, booking platforms, official booking URLs, and whether snapshots or refreshes are supported.
-   - Finsbury Park is currently the only venue with cached snapshot and protected refresh support.
+   - Finsbury Park and Lee Valley currently have cached snapshot and protected refresh support.
 
 7. **Local-only investigation and updater scripts**
    - Stored in `scripts/`.
@@ -81,9 +81,11 @@ GET /api/finsbury/snapshot?date=YYYY-MM-DD
 POST /api/finsbury/refresh?date=YYYY-MM-DD
 ```
 
-For now, only `finsbury-park` has cached snapshot support. Other venues can appear in the registry before they have parsing or refresh support.
+For now, `finsbury-park` and `lee-valley` have cached snapshot support. Other venues can appear in the registry before they have parsing or refresh support.
 
 ## Protected Refresh Flow
+
+Finsbury Park uses a rendered-page refresh path:
 
 ```text
 Developer request with X-Refresh-Token
@@ -102,7 +104,26 @@ Parser extracts court / time / status candidates
 backend/data/finsburySnapshots/YYYY-MM-DD.json
 ```
 
-This is manual and protected. It is not triggered by normal frontend visits.
+Lee Valley uses a structured API refresh path:
+
+```text
+Developer request with X-Refresh-Token
+    |
+    v
+POST /api/venues/lee-valley/refresh
+    |
+    | calls Better public activity times API once
+    v
+Structured JSON time / price / spaces / status data
+    |
+    v
+Parser normalizes cached records
+    |
+    v
+backend/data/snapshots/lee-valley/YYYY-MM-DD.json
+```
+
+Both refresh paths are manual and protected. They are not triggered by normal frontend visits.
 
 ## Future Path For Adding Venues
 

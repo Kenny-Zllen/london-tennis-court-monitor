@@ -14,8 +14,8 @@
     "area": "Queen Elizabeth Olympic Park",
     "bookingPlatform": "Better",
     "officialBookingUrl": "https://www.better.org.uk/leisure-centre/lee-valley/hockey-and-tennis-centre",
-    "snapshotSupported": false,
-    "refreshSupported": false
+    "snapshotSupported": true,
+    "refreshSupported": true
   },
   {
     "id": "clapham-common",

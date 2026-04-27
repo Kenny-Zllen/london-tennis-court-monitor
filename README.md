@@ -6,7 +6,7 @@ A portfolio MVP for discovering London tennis venues, filtering by booking detai
 
 London Tennis Court Monitor is a React web app that helps users browse London tennis venues and quickly navigate to official booking systems.
 
-The app includes a venue finder with search, area filtering, booking platform filtering, and responsive venue cards. It also includes an experimental Finsbury Park daily booking-status snapshot based on cached investigation output.
+The app includes a venue finder with search, area filtering, booking platform filtering, and responsive venue cards. It also includes an experimental Finsbury Park daily booking-status snapshot based on cached investigation output. The backend can also cache Lee Valley snapshots for future frontend use.
 
 This project is intentionally scoped as a discovery and portfolio tool. It is not an auto-booking bot, and it does not provide live court availability.
 
@@ -61,16 +61,16 @@ Price is intentionally excluded because parser validation found that price assoc
 
 This section is not live availability. The frontend does not request ClubSpark or any booking platform. Users must always confirm availability and book through the official ClubSpark page.
 
-## MVP v8: Multi-Venue Backend Architecture
+## MVP v9.3: Multi-Venue Cached Backend Architecture
 
-MVP v8 adds a venue-based backend API structure while keeping Finsbury Park as the only fully supported snapshot venue.
+MVP v9.3 supports two cached backend snapshot venues while keeping normal frontend reads cache-only.
 
 The backend now has a venue registry at `backend/data/venues.json`. The registry lists venues with IDs, names, areas, booking platforms, official booking URLs, and whether cached snapshots or protected refreshes are supported.
 
 Current support status:
 
-- Finsbury Park: cached snapshots supported, protected manual refresh supported
-- Lee Valley Hockey and Tennis Centre: registry-only
+- Finsbury Park: cached snapshots supported, protected manual refresh supported through rendered-page Playwright investigation
+- Lee Valley Hockey and Tennis Centre: cached snapshots supported, protected manual refresh supported through the Better public activity times API
 - Clapham Common: registry-only
 - Wimbledon Park: registry-only
 
@@ -91,7 +91,7 @@ GET /api/finsbury/snapshot?date=YYYY-MM-DD
 POST /api/finsbury/refresh?date=YYYY-MM-DD
 ```
 
-Protected refresh is currently implemented only for `finsbury-park`. Other venues are listed for future expansion, but they do not have cached snapshot parsing or refresh workflows yet.
+Protected refresh is currently implemented for `finsbury-park` and `lee-valley`. Other venues are listed for future expansion, but they do not have cached snapshot parsing or refresh workflows yet.
 
 ## Investigation Workflow
 
@@ -105,7 +105,15 @@ The Finsbury Park snapshot came from an investigation workflow:
 - Optional protected backend refresh that can manually regenerate cached Finsbury Park JSON
 - Manual decision to exclude price from the frontend snapshot
 
-These investigation scripts are not part of the production frontend and are not used for live monitoring. Normal frontend visits do not trigger Playwright or ClubSpark requests.
+Lee Valley support came from a separate investigation workflow:
+
+- Manual review of the Better booking flow
+- HTML and rendered-page checks to avoid opening-hours false positives
+- Public Better activity times API investigation
+- Local parser validation for time, spaces, status, and price fields
+- Protected backend refresh that can manually regenerate cached Lee Valley JSON
+
+These investigation scripts are not part of the production frontend and are not used for live monitoring. Normal frontend visits do not trigger Playwright, ClubSpark requests, or Better API requests.
 
 ## Ethical Constraints
 
@@ -126,7 +134,7 @@ Any future availability work should remain conservative, transparent, and aligne
 
 This app does not show live court availability.
 
-The Finsbury Park snapshot is static and may be incomplete or outdated. It is based on local investigation output, not a live data feed.
+Cached venue snapshots may be incomplete or outdated. They are based on manual protected refreshes, not a live data feed.
 
 The production app does not include:
 
@@ -259,6 +267,7 @@ List cached snapshot dates for a venue:
 
 ```bash
 curl http://127.0.0.1:8000/api/venues/finsbury-park/snapshots
+curl http://127.0.0.1:8000/api/venues/lee-valley/snapshots
 ```
 
 Fetch the latest cached snapshot:
@@ -277,9 +286,10 @@ The venue-based equivalent is:
 
 ```bash
 curl "http://127.0.0.1:8000/api/venues/finsbury-park/snapshot?date=2026-04-26"
+curl "http://127.0.0.1:8000/api/venues/lee-valley/snapshot?date=2026-04-27"
 ```
 
-Normal backend reads are cache-based. Users must still confirm availability and book through the official ClubSpark page.
+Normal backend reads are cache-based. Users must still confirm availability and book through the official venue booking page.
 
 When the backend is running locally, the Finsbury Park snapshot section will try to use the FastAPI cached backend first. If the backend is unavailable, the frontend falls back to bundled static snapshot files from `src/data/finsburySnapshots/`.
 
@@ -296,7 +306,7 @@ POST /api/finsbury/refresh?date=YYYY-MM-DD
 The venue-based refresh endpoint is:
 
 ```text
-POST /api/venues/finsbury-park/refresh?date=YYYY-MM-DD
+POST /api/venues/{venue_id}/refresh?date=YYYY-MM-DD
 ```
 
 It requires this header:
@@ -320,7 +330,15 @@ curl -X POST \
   "http://127.0.0.1:8000/api/venues/finsbury-park/refresh?date=2026-04-26"
 ```
 
-This endpoint is for developer use only. For Finsbury Park, it loads the public booking page once, parses rendered court/time/status candidates, writes cached JSON under `backend/data/finsburySnapshots/`, and returns a summary. Normal frontend users do not trigger refreshes.
+Lee Valley refresh example:
+
+```bash
+curl -X POST \
+  -H "X-Refresh-Token: dev-secret" \
+  "http://127.0.0.1:8000/api/venues/lee-valley/refresh?date=2026-04-27"
+```
+
+These endpoints are for developer use only. Finsbury Park loads the public ClubSpark booking page once with Playwright, parses rendered court/time/status candidates, writes cached JSON under `backend/data/finsburySnapshots/`, and returns a summary. Lee Valley calls the Better public activity times API once, converts structured time/price/spaces/status records, writes cached JSON under `backend/data/snapshots/lee-valley/`, and returns a summary. Normal frontend users do not trigger refreshes.
 
 ### Render Deployment Settings
 

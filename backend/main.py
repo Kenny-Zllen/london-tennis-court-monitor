@@ -4,6 +4,8 @@ import re
 from datetime import date, datetime
 from pathlib import Path
 
+import certifi
+import requests
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -28,18 +30,29 @@ ALLOWED_ORIGINS = [
 BACKEND_DATA_DIR = Path(__file__).parent / "data"
 VENUE_REGISTRY_PATH = BACKEND_DATA_DIR / "venues.json"
 FINSBURY_DATA_DIR = BACKEND_DATA_DIR / "finsburySnapshots"
+LEE_VALLEY_DATA_DIR = BACKEND_DATA_DIR / "snapshots" / "lee-valley"
 VENUE_DATA_DIRS = {
     "finsbury-park": FINSBURY_DATA_DIR,
+    "lee-valley": LEE_VALLEY_DATA_DIR,
 }
 DATE_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 COURT_HEADING_PATTERN = re.compile(r"^Court\s+\d+(?:\s+\(.+\))?$")
 TIME_RANGE_PATTERN = re.compile(r"^(?:at\s+)?(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$")
 STATUS_PATTERN = re.compile(r"^(Available|Unavailable|Booked|Not available|Closed)$", re.I)
 BOOKING_BASE_URL = "https://clubspark.lta.org.uk/FinsburyPark/Booking/BookByDate"
-SNAPSHOT_DISCLAIMER = (
+FINSBURY_SNAPSHOT_DISCLAIMER = (
     "Cached static snapshot data only. Not live availability. "
     "Some records may require manual validation. Always confirm and book "
     "through the official ClubSpark page."
+)
+LEE_VALLEY_VENUE_ID = "lee-valley"
+LEE_VALLEY_VENUE_NAME = "Lee Valley Hockey and Tennis Centre"
+LEE_VALLEY_ACTIVITY_NAME = "Outdoor Court Hire"
+LEE_VALLEY_VENUE_SLUG = "lee-valley-hockey-and-tennis-centre"
+LEE_VALLEY_ACTIVITY_SLUG = "tennis-court-outdoor"
+LEE_VALLEY_SNAPSHOT_DISCLAIMER = (
+    "Cached static snapshot data only. Not live availability. Always confirm "
+    "and book through the official Better booking page."
 )
 FINSBURY_VENUE_ID = "finsbury-park"
 
@@ -137,6 +150,22 @@ def load_snapshot_for_venue(venue_id: str, date: str) -> dict:
 
 def build_booking_url(date_value: str) -> str:
     return f"{BOOKING_BASE_URL}#?date={date_value}&role=guest"
+
+
+def build_lee_valley_api_url(date_value: str) -> str:
+    return (
+        "https://better-admin.org.uk/api/activities/venue/"
+        f"{LEE_VALLEY_VENUE_SLUG}/activity/{LEE_VALLEY_ACTIVITY_SLUG}"
+        f"/times?date={date_value}"
+    )
+
+
+def build_lee_valley_referer_url(date_value: str) -> str:
+    return (
+        "https://bookings.better.org.uk/location/"
+        f"{LEE_VALLEY_VENUE_SLUG}/{LEE_VALLEY_ACTIVITY_SLUG}"
+        f"/{date_value}/by-time"
+    )
 
 
 def parse_rendered_text(text: str) -> list[dict]:
@@ -247,7 +276,7 @@ def require_valid_refresh_token(refresh_token: str | None) -> None:
         )
 
 
-def refresh_snapshot(date_value: str) -> dict:
+def refresh_finsbury_snapshot_cache(date_value: str) -> dict:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:
@@ -286,7 +315,7 @@ def refresh_snapshot(date_value: str) -> dict:
             "sourceUrl": source_url,
             "lastCheckedAt": last_checked_at,
             "isLive": False,
-            "disclaimer": SNAPSHOT_DISCLAIMER,
+            "disclaimer": FINSBURY_SNAPSHOT_DISCLAIMER,
         },
         "records": records,
     }
@@ -301,8 +330,157 @@ def refresh_snapshot(date_value: str) -> dict:
     return {
         "status": "refreshed",
         "date": date_value,
+        "venueId": FINSBURY_VENUE_ID,
         "recordsGenerated": len(records),
         "countByCourt": count_by(records, "court"),
+        "countByStatus": count_by(records, "status"),
+        "lastCheckedAt": last_checked_at,
+    }
+
+
+def get_lee_valley_records_from_response(payload: object) -> list[dict]:
+    if isinstance(payload, list):
+        return payload
+
+    if not isinstance(payload, dict):
+        return []
+
+    for key in ["data", "results", "times"]:
+        value = payload.get(key)
+
+        if isinstance(value, list):
+            return value
+
+    return []
+
+
+def get_lee_valley_time_value(record: dict, field: str) -> str:
+    value = record.get(field)
+
+    if isinstance(value, str):
+        return value
+
+    if isinstance(value, dict) and value.get("format_24_hour"):
+        return value["format_24_hour"]
+
+    return "Unknown"
+
+
+def get_lee_valley_source_status(record: dict) -> str:
+    action_to_show = record.get("action_to_show")
+
+    if isinstance(action_to_show, dict) and action_to_show.get("status"):
+        return action_to_show["status"]
+
+    return record.get("status") or "Unknown"
+
+
+def map_lee_valley_status(record: dict) -> str:
+    spaces = int(record.get("spaces") or 0)
+    source_status = get_lee_valley_source_status(record).upper()
+
+    if spaces > 0 and source_status == "BOOK":
+        return "Available"
+
+    if spaces == 0:
+        return "Unavailable"
+
+    if source_status in ["FULL", "UNAVAILABLE", "SOLD_OUT", "CLOSED"]:
+        return "Unavailable"
+
+    return "Unavailable"
+
+
+def normalize_lee_valley_record(record: dict) -> dict:
+    start_time = get_lee_valley_time_value(record, "starts_at")
+    end_time = get_lee_valley_time_value(record, "ends_at")
+
+    return {
+        "venue": LEE_VALLEY_VENUE_NAME,
+        "activity": LEE_VALLEY_ACTIVITY_NAME,
+        "timeRange": f"{start_time} - {end_time}",
+        "status": map_lee_valley_status(record),
+        "spaces": int(record.get("spaces") or 0),
+        "price": (record.get("price") or {}).get("formatted_amount", "Unknown"),
+        "sourceStatus": get_lee_valley_source_status(record),
+        "confidence": "high",
+    }
+
+
+def refresh_lee_valley_snapshot_cache(date_value: str) -> dict:
+    source_url = build_lee_valley_api_url(date_value)
+    headers = {
+        "Accept": "application/json",
+        "Origin": "https://bookings.better.org.uk",
+        "Referer": build_lee_valley_referer_url(date_value),
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/124.0.0.0 Safari/537.36"
+        ),
+    }
+
+    try:
+        response = requests.get(
+            source_url,
+            headers=headers,
+            timeout=20,
+            verify=certifi.where(),
+        )
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Lee Valley Better API request failed: {exc}",
+        ) from exc
+
+    if not response.ok:
+        detail = response.text.replace("\n", " ").strip()[:500]
+        raise HTTPException(
+            status_code=502,
+            detail=(
+                "Lee Valley Better API request failed with "
+                f"status {response.status_code}: {detail}"
+            ),
+        )
+
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="Lee Valley Better API returned invalid JSON.",
+        ) from exc
+
+    raw_records = get_lee_valley_records_from_response(payload)
+    records = [normalize_lee_valley_record(record) for record in raw_records]
+    last_checked_at = datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+    snapshot = {
+        "meta": {
+            "venueId": LEE_VALLEY_VENUE_ID,
+            "venueName": LEE_VALLEY_VENUE_NAME,
+            "source": "Better public activity times API",
+            "checkedDate": date_value,
+            "sourceUrl": source_url,
+            "lastCheckedAt": last_checked_at,
+            "isLive": False,
+            "disclaimer": LEE_VALLEY_SNAPSHOT_DISCLAIMER,
+        },
+        "records": records,
+    }
+
+    LEE_VALLEY_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    snapshot_path = LEE_VALLEY_DATA_DIR / f"{date_value}.json"
+
+    with snapshot_path.open("w", encoding="utf-8") as file:
+        json.dump(snapshot, file, indent=2)
+        file.write("\n")
+
+    return {
+        "status": "refreshed",
+        "date": date_value,
+        "venueId": LEE_VALLEY_VENUE_ID,
+        "recordsGenerated": len(records),
         "countByStatus": count_by(records, "status"),
         "lastCheckedAt": last_checked_at,
     }
@@ -366,14 +544,18 @@ def refresh_venue_snapshot(
             detail="Refresh is not implemented for this venue yet.",
         )
 
-    if venue_id != FINSBURY_VENUE_ID:
-        raise HTTPException(
-            status_code=501,
-            detail="Refresh is not implemented for this venue yet.",
-        )
-
     selected_date = validate_date_string(date or datetime.utcnow().date().isoformat())
-    return refresh_snapshot(selected_date)
+
+    if venue_id == FINSBURY_VENUE_ID:
+        return refresh_finsbury_snapshot_cache(selected_date)
+
+    if venue_id == LEE_VALLEY_VENUE_ID:
+        return refresh_lee_valley_snapshot_cache(selected_date)
+
+    raise HTTPException(
+        status_code=501,
+        detail="Refresh is not implemented for this venue yet.",
+    )
 
 
 @app.get("/api/finsbury/snapshots")

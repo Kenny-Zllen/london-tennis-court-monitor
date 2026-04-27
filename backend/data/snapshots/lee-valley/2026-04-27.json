@@ -1,0 +1,134 @@
+{
+  "meta": {
+    "venueId": "lee-valley",
+    "venueName": "Lee Valley Hockey and Tennis Centre",
+    "source": "Better public activity times API",
+    "checkedDate": "2026-04-27",
+    "sourceUrl": "https://better-admin.org.uk/api/activities/venue/lee-valley-hockey-and-tennis-centre/activity/tennis-court-outdoor/times?date=2026-04-27",
+    "lastCheckedAt": "2026-04-27T05:22:43Z",
+    "isLive": false,
+    "disclaimer": "Cached static snapshot data only. Not live availability. Always confirm and book through the official Better booking page."
+  },
+  "records": [
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "10:00 - 11:00",
+      "status": "Available",
+      "spaces": 6,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "11:00 - 12:00",
+      "status": "Available",
+      "spaces": 3,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "12:00 - 13:00",
+      "status": "Available",
+      "spaces": 3,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "13:00 - 14:00",
+      "status": "Available",
+      "spaces": 5,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "14:00 - 15:00",
+      "status": "Available",
+      "spaces": 6,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "15:00 - 16:00",
+      "status": "Available",
+      "spaces": 5,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "16:00 - 17:00",
+      "status": "Available",
+      "spaces": 5,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "17:00 - 18:00",
+      "status": "Unavailable",
+      "spaces": 0,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "18:00 - 19:00",
+      "status": "Unavailable",
+      "spaces": 0,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "19:00 - 20:00",
+      "status": "Unavailable",
+      "spaces": 0,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "20:00 - 21:00",
+      "status": "Unavailable",
+      "spaces": 0,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    },
+    {
+      "venue": "Lee Valley Hockey and Tennis Centre",
+      "activity": "Outdoor Court Hire",
+      "timeRange": "21:00 - 22:00",
+      "status": "Unavailable",
+      "spaces": 0,
+      "price": "\u00a314.00",
+      "sourceStatus": "BOOK",
+      "confidence": "high"
+    }
+  ]
+}

@@ -10,12 +10,12 @@ function StatusCards({ venueCount, snapshotVenue }) {
     {
       label: "Experimental snapshot",
       value: snapshotVenue,
-      detail: "Generated static data",
+      detail: "Cached backend data",
     },
     {
       label: "Production scraping",
       value: "Not enabled",
-      detail: "Frontend does not request ClubSpark",
+      detail: "Frontend does not request booking platforms",
     },
     {
       label: "Booking action",

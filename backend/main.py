@@ -29,8 +29,9 @@ ALLOWED_ORIGINS = [
 
 BACKEND_DATA_DIR = Path(__file__).parent / "data"
 VENUE_REGISTRY_PATH = BACKEND_DATA_DIR / "venues.json"
-FINSBURY_DATA_DIR = BACKEND_DATA_DIR / "finsburySnapshots"
-LEE_VALLEY_DATA_DIR = BACKEND_DATA_DIR / "snapshots" / "lee-valley"
+SNAPSHOT_DATA_DIR = BACKEND_DATA_DIR / "snapshots"
+FINSBURY_DATA_DIR = SNAPSHOT_DATA_DIR / "finsbury-park"
+LEE_VALLEY_DATA_DIR = SNAPSHOT_DATA_DIR / "lee-valley"
 VENUE_DATA_DIRS = {
     "finsbury-park": FINSBURY_DATA_DIR,
     "lee-valley": LEE_VALLEY_DATA_DIR,
@@ -90,7 +91,7 @@ def require_snapshot_supported(venue_id: str) -> dict:
     if not venue.get("snapshotSupported"):
         raise HTTPException(
             status_code=404,
-            detail=f"Cached snapshots are not available for {venue['name']} yet.",
+            detail="Snapshot support is not implemented for this venue yet.",
         )
 
     if venue_id not in VENUE_DATA_DIRS:
@@ -141,7 +142,7 @@ def load_snapshot_for_venue(venue_id: str, date: str) -> dict:
     if not snapshot_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"No cached {venue['name']} snapshot found for {date}.",
+            detail=f"No cached snapshot found for {venue_id}/{date}",
         )
 
     with snapshot_path.open("r", encoding="utf-8") as file:
@@ -309,6 +310,7 @@ def refresh_finsbury_snapshot_cache(date_value: str) -> dict:
 
     snapshot = {
         "meta": {
+            "venueId": FINSBURY_VENUE_ID,
             "venueName": "Finsbury Park",
             "source": "Protected manual FastAPI refresh",
             "checkedDate": date_value,
@@ -439,7 +441,7 @@ def refresh_lee_valley_snapshot_cache(date_value: str) -> dict:
             status_code=502,
             detail=(
                 "Lee Valley Better API request failed with "
-                f"status {response.status_code}: {detail}"
+                f"status {response.status_code} {response.reason}: {detail}"
             ),
         )
 
@@ -518,7 +520,7 @@ def get_venue_snapshot(
     if not available_dates:
         raise HTTPException(
             status_code=404,
-            detail=f"No cached {venue['name']} snapshots are available.",
+            detail=f"No cached snapshots found for {venue_id}",
         )
 
     selected_date = date or available_dates[-1]

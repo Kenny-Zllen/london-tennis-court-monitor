@@ -6,16 +6,18 @@
     "bookingPlatform": "ClubSpark",
     "officialBookingUrl": "https://clubspark.lta.org.uk/FinsburyPark/Booking",
     "snapshotSupported": true,
-    "refreshSupported": true
+    "refreshSupported": true,
+    "snapshotMethod": "playwright-rendered-page"
   },
   {
     "id": "lee-valley",
     "name": "Lee Valley Hockey and Tennis Centre",
     "area": "Queen Elizabeth Olympic Park",
     "bookingPlatform": "Better",
-    "officialBookingUrl": "https://www.better.org.uk/leisure-centre/lee-valley/hockey-and-tennis-centre",
+    "officialBookingUrl": "https://bookings.better.org.uk/location/lee-valley-hockey-and-tennis-centre/tennis-court-outdoor",
     "snapshotSupported": true,
-    "refreshSupported": true
+    "refreshSupported": true,
+    "snapshotMethod": "public-json-api"
   },
   {
     "id": "clapham-common",
@@ -24,7 +26,8 @@
     "bookingPlatform": "ClubSpark",
     "officialBookingUrl": "https://clubspark.lta.org.uk/ClaphamCommon/Booking",
     "snapshotSupported": false,
-    "refreshSupported": false
+    "refreshSupported": false,
+    "snapshotMethod": null
   },
   {
     "id": "wimbledon-park",
@@ -33,6 +36,7 @@
     "bookingPlatform": "Enable",
     "officialBookingUrl": "https://enablelc.org/parks/wimbledon-park/",
     "snapshotSupported": false,
-    "refreshSupported": false
+    "refreshSupported": false,
+    "snapshotMethod": null
   }
 ]

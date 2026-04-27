@@ -10,9 +10,11 @@ function SystemStatus({
   lastCheckedAt,
   recordCount,
   selectedDate,
+  selectedVenue,
 }) {
   const rows = [
     ["Frontend", "Vercel"],
+    ["Selected venue", formatValue(selectedVenue)],
     ["Backend API", backendConnected ? "Connected" : "Fallback mode"],
     [
       "Data source",
@@ -64,8 +66,8 @@ function SystemStatus({
       </div>
 
       <p className="mt-4 text-sm leading-6 text-slate-600">
-        The production app does not scrape ClubSpark in real time. It displays
-        cached snapshot data only.
+        The production app does not scrape booking platforms in real time. It
+        displays cached snapshot data only.
       </p>
     </aside>
   );

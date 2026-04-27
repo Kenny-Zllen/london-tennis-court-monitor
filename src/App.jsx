@@ -8,7 +8,6 @@ import PipelineSection from "./components/PipelineSection.jsx";
 import RoadmapSection from "./components/RoadmapSection.jsx";
 import StatusCards from "./components/StatusCards.jsx";
 import VenueCard from "./components/VenueCard.jsx";
-import { defaultFinsburySnapshot } from "./data/finsburySnapshots/index.js";
 import { venues } from "./data/venues.js";
 
 function App() {
@@ -43,7 +42,7 @@ function App() {
     <div className="min-h-screen bg-slate-50">
       <Header />
       <StatusCards
-        snapshotVenue={defaultFinsburySnapshot.meta.venueName}
+        snapshotVenue="2 cached venues"
         venueCount={venues.length}
       />
       <main>

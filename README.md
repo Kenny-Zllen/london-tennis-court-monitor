@@ -1,12 +1,12 @@
 # London Tennis Court Monitor
 
-A portfolio MVP for discovering London tennis venues, filtering by booking details, and opening official booking pages. The frontend is deployed on Vercel, and the optional FastAPI backend serves cached snapshot data only.
+A full-stack portfolio MVP for discovering London tennis venues, filtering by booking details, and viewing cached booking-status snapshots. The React frontend is deployed on Vercel, and the FastAPI backend on Render serves cached snapshot data only.
 
 ## Project Overview
 
-London Tennis Court Monitor is a React web app that helps users browse London tennis venues and quickly navigate to official booking systems.
+London Tennis Court Monitor is a React and FastAPI web app that helps users browse London tennis venues, view cached snapshot data for supported venues, and quickly navigate to official booking systems.
 
-The app includes a venue finder with search, area filtering, booking platform filtering, and responsive venue cards. It also includes an experimental Finsbury Park daily booking-status snapshot based on cached investigation output. The backend can also cache Lee Valley snapshots for future frontend use.
+The app includes a venue finder with search, area filtering, booking platform filtering, and responsive venue cards. It also includes an experimental multi-venue snapshot dashboard for cached Finsbury Park and Lee Valley booking-status data.
 
 This project is intentionally scoped as a discovery and portfolio tool. It is not an auto-booking bot, and it does not provide live court availability.
 
@@ -23,10 +23,12 @@ This project is intentionally scoped as a discovery and portfolio tool. It is no
 - Responsive venue cards
 - Official booking page links
 - Empty states for unmatched filters
-- Experimental Finsbury Park static daily snapshot
-- Static snapshot date selector for pre-generated dates
+- Experimental multi-venue cached snapshot dashboard
+- Venue selector for supported cached snapshot venues
+- Snapshot date selector per selected venue
 - Snapshot records grouped by court
 - Snapshot records sorted by start time
+- Lee Valley records grouped by activity with spaces and price
 - Snapshot filters for court and status
 - FastAPI cached-data backend with static frontend fallback
 - Multi-venue backend registry
@@ -61,6 +63,38 @@ Price is intentionally excluded because parser validation found that price assoc
 
 This section is not live availability. The frontend does not request ClubSpark or any booking platform. Users must always confirm availability and book through the official ClubSpark page.
 
+## MVP v10: Multi-Venue Snapshot Frontend
+
+MVP v10 updates the frontend snapshot dashboard so users can switch between supported cached venues.
+
+Currently supported frontend snapshot venues:
+
+- Finsbury Park
+- Lee Valley Hockey and Tennis Centre
+
+The frontend reads the backend venue registry from:
+
+```text
+GET /api/venues
+```
+
+It only shows venues where `snapshotSupported` is `true`. When a venue is selected, the frontend reads cached snapshot dates and cached snapshot records from:
+
+```text
+GET /api/venues/{venue_id}/snapshots
+GET /api/venues/{venue_id}/snapshot?date=YYYY-MM-DD
+```
+
+The frontend does not call ClubSpark, Better, or any booking platform directly. It does not expose `REFRESH_TOKEN`, and there is no public refresh button.
+
+Display behavior:
+
+- Finsbury Park records are grouped by court.
+- Lee Valley records are grouped by activity and show time range, status, spaces, and price.
+- Both venues show cached-data disclaimers and official booking links.
+- If the backend is unavailable, Finsbury Park falls back to bundled static frontend data.
+- If Lee Valley backend data is unavailable and no static fallback exists, the UI explains that no static fallback is available for that venue.
+
 ## MVP v9.3: Multi-Venue Cached Backend Architecture
 
 MVP v9.3 supports two cached backend snapshot venues while keeping normal frontend reads cache-only.
@@ -73,6 +107,12 @@ Current support status:
 - Lee Valley Hockey and Tennis Centre: cached snapshots supported, protected manual refresh supported through the Better public activity times API
 - Clapham Common: registry-only
 - Wimbledon Park: registry-only
+
+Cached backend snapshots use this canonical path:
+
+```text
+backend/data/snapshots/{venue_id}/YYYY-MM-DD.json
+```
 
 The general backend endpoints are:
 
@@ -122,7 +162,10 @@ This project keeps clear boundaries:
 - No auto-booking
 - No login bypassing
 - No frontend requests to ClubSpark
+- No frontend requests to Better
 - No public production scraping
+- No public refresh button
+- Refresh token is never exposed to the frontend
 - No scheduler or repeated polling
 - No alerts or notifications
 - No payment handling
@@ -231,7 +274,7 @@ Changing the snapshot date requires running the local updater and redeploying or
 
 The project also includes a small FastAPI backend prototype under `backend/`.
 
-The backend serves cached local JSON snapshot data only for normal GET requests. It does not scrape ClubSpark when users visit the frontend, schedule checks, log users in, send alerts, or book courts.
+The backend serves cached local JSON snapshot data only for normal GET requests. It does not scrape ClubSpark or Better when users visit the frontend, schedule checks, log users in, send alerts, or book courts.
 
 Install backend dependencies:
 
@@ -291,9 +334,9 @@ curl "http://127.0.0.1:8000/api/venues/lee-valley/snapshot?date=2026-04-27"
 
 Normal backend reads are cache-based. Users must still confirm availability and book through the official venue booking page.
 
-When the backend is running locally, the Finsbury Park snapshot section will try to use the FastAPI cached backend first. If the backend is unavailable, the frontend falls back to bundled static snapshot files from `src/data/finsburySnapshots/`.
+When the backend is running locally, the snapshot dashboard reads supported venues and cached snapshots from the FastAPI backend. If the backend is unavailable, the frontend falls back to bundled Finsbury Park static snapshot files from `src/data/finsburySnapshots/`.
 
-The deployed Vercel frontend still works without a deployed backend because of this static fallback. It does not fetch ClubSpark or dynamically generate new dates.
+The deployed Vercel frontend still works without a deployed backend because of this Finsbury fallback. It does not fetch ClubSpark, Better, or dynamically generate new dates.
 
 ### Protected Manual Refresh
 
@@ -338,7 +381,7 @@ curl -X POST \
   "http://127.0.0.1:8000/api/venues/lee-valley/refresh?date=2026-04-27"
 ```
 
-These endpoints are for developer use only. Finsbury Park loads the public ClubSpark booking page once with Playwright, parses rendered court/time/status candidates, writes cached JSON under `backend/data/finsburySnapshots/`, and returns a summary. Lee Valley calls the Better public activity times API once, converts structured time/price/spaces/status records, writes cached JSON under `backend/data/snapshots/lee-valley/`, and returns a summary. Normal frontend users do not trigger refreshes.
+These endpoints are for developer use only. Finsbury Park loads the public ClubSpark booking page once with Playwright, parses rendered court/time/status candidates, writes cached JSON under `backend/data/snapshots/finsbury-park/`, and returns a summary. Lee Valley calls the Better public activity times API once, converts structured time/price/spaces/status records, writes cached JSON under `backend/data/snapshots/lee-valley/`, and returns a summary. Normal frontend users do not trigger refreshes.
 
 ### Render Deployment Settings
 
@@ -351,6 +394,7 @@ Deploy the backend as a Render Web Service using these settings:
 Add this Render environment variable:
 
 ```text
+PYTHON_VERSION=3.12.8
 REFRESH_TOKEN=<a-long-random-secret>
 ```
 
@@ -365,7 +409,7 @@ https://london-tennis-court-monitor.vercel.app
 After deploying the backend, the frontend can be pointed at it with:
 
 ```bash
-VITE_API_BASE_URL=https://your-render-service.onrender.com
+VITE_API_BASE_URL=https://london-tennis-court-monitor-api.onrender.com
 ```
 
 ## Portfolio Value

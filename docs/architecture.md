@@ -2,42 +2,9 @@
 
 ## Current Architecture
 
-London Tennis Court Monitor is a React + Vite frontend deployed on Vercel with a small FastAPI backend deployed on Render.
+London Tennis Court Monitor is a React + Vite frontend on Vercel with a FastAPI backend on Render.
 
-The production frontend does not request booking platforms directly. Normal backend GET requests serve cached JSON snapshot data only. External booking data is requested only by protected manual refresh endpoints for supported venues.
-
-## Components
-
-1. **React + Vite frontend**
-   - Provides the main application shell and client-side interactivity.
-   - Handles venue filtering, search, snapshot date selection, and snapshot filters.
-   - Uses static frontend snapshot files as a fallback if the backend is unavailable.
-
-2. **Tailwind CSS UI**
-   - Used for responsive layout, cards, filters, badges, status panels, and dashboard sections.
-
-3. **Static venue dataset**
-   - Stored in `src/data/venues.js`.
-   - Powers the frontend venue finder and official booking links.
-
-4. **Static frontend snapshot dataset**
-   - Stored as dated files in `src/data/finsburySnapshots/`.
-   - Used as a fallback when the FastAPI backend cannot be reached.
-
-5. **FastAPI cached-data backend**
-   - Stored in `backend/`.
-   - Deployed separately from the frontend.
-   - Serves cached venue snapshot JSON files from `backend/data/`.
-   - Does not scrape booking platforms during normal user visits.
-
-6. **Backend venue registry**
-   - Stored in `backend/data/venues.json`.
-   - Lists venue IDs, names, areas, booking platforms, official booking URLs, and whether snapshots or refreshes are supported.
-   - Finsbury Park and Lee Valley currently have cached snapshot and protected refresh support.
-
-7. **Local-only investigation and updater scripts**
-   - Stored in `scripts/`.
-   - Used to investigate rendered page text, parse candidates, summarize parser output, and generate static frontend snapshots.
+The frontend never requests ClubSpark or Better directly. Normal backend `GET` endpoints read cached JSON files only. External booking platforms are contacted only by protected manual refresh endpoints that require `X-Refresh-Token`.
 
 ## Current Diagram
 
@@ -47,121 +14,148 @@ User Browser
     v
 Vercel React Frontend
     |
-    | reads cached data when backend is available
+    | GET cached snapshot data only
     v
 Render FastAPI Backend
     |
-    | normal GET endpoints read JSON only
+    | reads JSON files
     v
-Cached snapshot files
+backend/data/snapshots/{venue_id}/YYYY-MM-DD.json
 
-Fallback path:
-Vercel React Frontend -> bundled static snapshot files
+Fallback:
+React Frontend -> bundled Finsbury static snapshots
 
-User booking action:
+Booking:
 User Browser -> official venue booking page
 ```
 
-## Venue-Based API Design
+## Venue Registry
 
-MVP v8 introduces general venue endpoints:
+The backend registry lives at:
 
 ```text
-GET /api/venues
-GET /api/venues/{venue_id}/snapshots
-GET /api/venues/{venue_id}/snapshot?date=YYYY-MM-DD
+backend/data/venues.json
+```
+
+Supported cached venues:
+
+- `finsbury-park`: Playwright-rendered page snapshot
+- `lee-valley`: Better public JSON API snapshot
+
+Registry-only venues:
+
+- `clapham-common`
+- `wimbledon-park`
+
+## Canonical Cache Path
+
+All backend cached snapshots use:
+
+```text
+backend/data/snapshots/
+  finsbury-park/
+    YYYY-MM-DD.json
+  lee-valley/
+    YYYY-MM-DD.json
+```
+
+Venue-based endpoints read and write only this canonical structure.
+
+## API Design
+
+```text
+GET  /api/venues
+GET  /api/venues/{venue_id}/snapshots
+GET  /api/venues/{venue_id}/snapshot?date=YYYY-MM-DD
 POST /api/venues/{venue_id}/refresh?date=YYYY-MM-DD
 ```
 
-Backwards-compatible Finsbury endpoints remain available:
+Backwards-compatible Finsbury aliases remain:
 
 ```text
-GET /api/finsbury/snapshots
-GET /api/finsbury/snapshot?date=YYYY-MM-DD
+GET  /api/finsbury/snapshots
+GET  /api/finsbury/snapshot?date=YYYY-MM-DD
 POST /api/finsbury/refresh?date=YYYY-MM-DD
 ```
 
-For now, `finsbury-park` and `lee-valley` have cached snapshot support. Other venues can appear in the registry before they have parsing or refresh support.
+## Refresh Sequences
 
-## Protected Refresh Flow
-
-Finsbury Park uses a rendered-page refresh path:
+Finsbury Park:
 
 ```text
-Developer request with X-Refresh-Token
+Developer + X-Refresh-Token
     |
     v
 POST /api/venues/finsbury-park/refresh
     |
-    | opens public ClubSpark guest page once
     v
-Playwright rendered text capture
+Playwright loads public ClubSpark guest page once
     |
     v
-Parser extracts court / time / status candidates
+Rendered text parser extracts court / time / status
     |
     v
-backend/data/finsburySnapshots/YYYY-MM-DD.json
+backend/data/snapshots/finsbury-park/YYYY-MM-DD.json
 ```
 
-Lee Valley uses a structured API refresh path:
+Lee Valley:
 
 ```text
-Developer request with X-Refresh-Token
+Developer + X-Refresh-Token
     |
     v
 POST /api/venues/lee-valley/refresh
     |
-    | calls Better public activity times API once
     v
-Structured JSON time / price / spaces / status data
+requests.get Better public times API once
     |
     v
-Parser normalizes cached records
+Parser normalizes time / spaces / status / price
     |
     v
 backend/data/snapshots/lee-valley/YYYY-MM-DD.json
 ```
 
-Both refresh paths are manual and protected. They are not triggered by normal frontend visits.
+Both refresh paths are manual, protected, and not triggered by normal frontend visits.
 
-## Future Path For Adding Venues
-
-To add another venue safely:
-
-1. Add the venue to `backend/data/venues.json` with `snapshotSupported: false`.
-2. Investigate the venue manually and review terms, visibility, and request behavior.
-3. Create a venue-specific parser only if public data access is appropriate.
-4. Add a cache folder and update backend routing helpers for that venue.
-5. Enable `snapshotSupported` only after cached data can be produced reliably.
-6. Enable `refreshSupported` only after protected manual refresh is implemented and tested.
-
-## Future Architecture If Broader Monitoring Is Added
-
-Live monitoring is not currently implemented. If it is added later, it should be designed conservatively and ethically:
-
-- Backend worker outside the frontend
-- Conservative polling
-- Cached results
-- Last checked timestamp
-- Frontend reads cached backend data
-- Users still book through official venue pages
+## Frontend Fetch And Fallback
 
 ```text
-Backend worker
-    |
-    | conservative checks after terms and limits are reviewed
-    v
-Official booking platform
+Load snapshot dashboard
     |
     v
-Cache / API with last checked timestamp
+GET /api/venues
     |
     v
-React Frontend on Vercel
+Show venues with snapshotSupported: true
     |
     v
-User opens official booking page to confirm and book
+GET /api/venues/{venue_id}/snapshots
+    |
+    v
+GET /api/venues/{venue_id}/snapshot?date=latest
 ```
 
-This future design would still avoid auto-booking, login bypassing, and aggressive polling.
+If the backend is unavailable:
+
+- Finsbury Park falls back to bundled static frontend snapshots.
+- Lee Valley shows a clear message because no static frontend fallback exists.
+
+## Safety Boundaries
+
+- No frontend scraping
+- No public refresh button
+- No refresh token in frontend code
+- No auto-booking
+- No login bypass
+- No booking form submission
+- No scheduler or alerts yet
+- Users always book through official venue pages
+
+## Future Roadmap
+
+- Add stale-data age indicators
+- Add manual validation workflow for cached snapshots
+- Add more venues only after terms and data access are reviewed
+- Add conservative scheduled refresh only after rate limits and terms are understood
+- Consider optional alerts only after cached backend behavior is stable and compliant

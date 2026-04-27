@@ -11,6 +11,9 @@
     "investigate:finsbury:rendered": "node scripts/check-finsbury-rendered.js",
     "investigate:finsbury:parse": "node scripts/parse-finsbury-rendered-text.js",
     "investigate:finsbury:summarize": "node scripts/summarize-finsbury-candidates.js",
+    "investigate:lee-valley:html": "node scripts/check-lee-valley-html.js",
+    "investigate:lee-valley:rendered": "node scripts/check-lee-valley-rendered.js",
+    "investigate:lee-valley:times-api": "node scripts/check-lee-valley-times-api.js",
     "update:finsbury:snapshot": "node scripts/update-finsbury-static-snapshot.js"
   },
   "dependencies": {

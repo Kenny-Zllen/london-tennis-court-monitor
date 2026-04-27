@@ -13,8 +13,8 @@ function Header() {
           </h1>
           <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
             Discover London tennis venues, compare booking basics, and open
-            official booking pages. The Finsbury Park section is an experimental
-            static snapshot, not a live booking monitor.
+            official booking pages. The snapshot dashboard shows cached venue
+            data, not live availability.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -28,7 +28,7 @@ function Header() {
               className="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2"
               href="#finsbury-snapshot"
             >
-              View Finsbury snapshot
+              View snapshots
             </a>
           </div>
         </div>

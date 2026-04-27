@@ -1,5 +1,6 @@
 {
   "meta": {
+    "venueId": "finsbury-park",
     "venueName": "Finsbury Park",
     "source": "Protected manual FastAPI refresh",
     "checkedDate": "2026-04-27",

@@ -512,7 +512,7 @@ function FinsburySnapshot() {
           />
         </div>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="rounded-lg border border-slate-200 bg-white p-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Venue
@@ -562,18 +562,10 @@ function FinsburySnapshot() {
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Records parsed
-            </p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">
-              {sortedSlots.length}
-            </p>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Live status
             </p>
             <p className="mt-2 text-sm font-semibold text-rose-800">
-              {snapshotMeta.isLive ? "Live" : "Not live"}
+              {snapshotMeta.isLive ? "Live" : "Not live (cached)"}
             </p>
           </div>
         </div>

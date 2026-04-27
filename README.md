@@ -1,6 +1,6 @@
 # London Tennis Court Monitor
 
-A full-stack portfolio MVP for discovering London tennis venues, filtering by booking details, and viewing cached booking-status snapshots. The React frontend is deployed on Vercel, and the FastAPI backend on Render serves cached snapshot data only.
+A beta-ready, full-stack cached tennis court monitoring product for discovering London tennis venues, filtering by booking details, and viewing cached booking-status snapshots across multiple supported venues. The React frontend is deployed on Vercel, and the FastAPI backend on Render serves cached snapshot data only. This is cached monitoring, not live availability.
 
 ## Project Overview
 

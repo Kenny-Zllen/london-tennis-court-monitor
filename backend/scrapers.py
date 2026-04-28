@@ -24,6 +24,22 @@ TIME_PATTERN = re.compile(r"^(?:at\s+)?(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})$")
 STATUS_PATTERN = re.compile(
     r"^(Available|Unavailable|Booked|Not available|Closed)$", re.IGNORECASE
 )
+PRICE_PATTERN = re.compile(r"^£(\d+)(?:\.(\d{2}))?$")
+CLUBSPARK_DEFAULT_START = "07:00"
+
+
+def _add_hour(hhmm: str) -> str:
+    h, m = hhmm.split(":")
+    return f"{int(h) + 1:02d}:{m}"
+
+
+def _price_to_pence(line: str) -> int | None:
+    m = PRICE_PATTERN.match(line)
+    if not m:
+        return None
+    pounds = int(m.group(1))
+    pence = int(m.group(2)) if m.group(2) else 0
+    return pounds * 100 + pence
 
 
 def scrape_clubspark(venue: dict, target_date: str) -> list[dict]:
@@ -62,46 +78,93 @@ def _parse_clubspark_text(text: str, venue_id: str, target_date: str) -> list[di
     records: list[dict] = []
     seen: set = set()
     current_court: str | None = None
+    cursor: str | None = None
 
-    for index, line in enumerate(lines):
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
         if COURT_PATTERN.match(line):
             current_court = line
+            cursor = CLUBSPARK_DEFAULT_START
+            i += 1
             continue
 
         if not current_court:
+            i += 1
             continue
 
-        time_match = TIME_PATTERN.match(line)
-        next_line = lines[index + 1] if index + 1 < len(lines) else ""
-        status_match = STATUS_PATTERN.match(line)
+        next_line = lines[i + 1] if i + 1 < len(lines) else ""
+        time_m = TIME_PATTERN.match(line)
+        status_m = STATUS_PATTERN.match(line)
+        price_pence = _price_to_pence(line)
 
-        slot = None
-
-        if time_match and STATUS_PATTERN.match(next_line):
+        if time_m and STATUS_PATTERN.match(next_line):
+            start, end = time_m.group(1), time_m.group(2)
+            slot = _make_clubspark_slot(
+                venue_id, target_date, current_court, start, end, next_line, None
+            )
+            cursor = end
+            i += 2
+        elif time_m:
+            start, end = time_m.group(1), time_m.group(2)
             slot = _make_clubspark_slot(
                 venue_id,
                 target_date,
                 current_court,
-                time_match.group(1),
-                time_match.group(2),
-                next_line,
+                start,
+                end,
+                "Unavailable",
+                None,
+                source_status_override=next_line or "Session",
             )
-        elif status_match and next_line.startswith("at "):
+            cursor = end
+            i += 2
+            while i < len(lines):
+                peek = lines[i]
+                if (
+                    TIME_PATTERN.match(peek)
+                    or PRICE_PATTERN.match(peek)
+                    or COURT_PATTERN.match(peek)
+                    or STATUS_PATTERN.match(peek)
+                ):
+                    break
+                i += 1
+        elif price_pence is not None and cursor is not None:
+            start = cursor
+            end = _add_hour(start)
+            slot = _make_clubspark_slot(
+                venue_id,
+                target_date,
+                current_court,
+                start,
+                end,
+                "Available",
+                price_pence,
+                source_status_override=line,
+            )
+            cursor = end
+            i += 1
+        elif status_m and next_line.startswith("at "):
             ntm = TIME_PATTERN.match(next_line)
             if ntm:
+                start, end = ntm.group(1), ntm.group(2)
                 slot = _make_clubspark_slot(
-                    venue_id,
-                    target_date,
-                    current_court,
-                    ntm.group(1),
-                    ntm.group(2),
-                    line,
+                    venue_id, target_date, current_court, start, end, line, None
                 )
+                cursor = end
+                i += 2
+            else:
+                slot = None
+                i += 1
+        else:
+            slot = None
+            i += 1
 
         if not slot:
             continue
 
-        key = (slot["court"], slot["start_time"], slot["end_time"], slot["status"].lower())
+        key = (slot["court"], slot["start_time"], slot["end_time"])
         if key in seen:
             continue
         seen.add(key)
@@ -117,6 +180,8 @@ def _make_clubspark_slot(
     start_hhmm: str,
     end_hhmm: str,
     raw_status: str,
+    price_pence: int | None,
+    source_status_override: str | None = None,
 ) -> dict:
     return {
         "venue_id": venue_id,
@@ -126,9 +191,9 @@ def _make_clubspark_slot(
         "court": court,
         "activity": "",
         "status": _normalize_clubspark_status(raw_status),
-        "price_pence": None,
+        "price_pence": price_pence,
         "spaces": None,
-        "source_status": raw_status,
+        "source_status": source_status_override or raw_status,
     }
 
 
@@ -161,7 +226,7 @@ BETTER_HEADERS = {
     ),
 }
 
-PRICE_PATTERN = re.compile(r"(\d+)\.(\d{2})")
+BETTER_PRICE_PATTERN = re.compile(r"(\d+)\.(\d{2})")
 
 
 def scrape_better(venue: dict, target_date: str) -> list[dict]:
@@ -231,7 +296,7 @@ def _normalize_better_record(record: dict, venue_id: str, target_date: str) -> d
     price_obj = record.get("price") or {}
     formatted = price_obj.get("formatted_amount") if isinstance(price_obj, dict) else None
     if isinstance(formatted, str):
-        match = PRICE_PATTERN.search(formatted)
+        match = BETTER_PRICE_PATTERN.search(formatted)
         if match:
             price_pence = int(match.group(1)) * 100 + int(match.group(2))
 

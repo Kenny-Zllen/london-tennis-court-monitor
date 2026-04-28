@@ -87,10 +87,11 @@ def get_latest_seen_at(venue_id: str, slot_date: str) -> Optional[str]:
     return None
 
 
-def upsert_slot_and_log_event(slot: dict) -> bool:
+def upsert_slot_and_log_event(slot: dict) -> dict | None:
     """
     Upsert a normalized slot. If it is new or its status changed,
-    insert a row into slot_events and return True.
+    insert a row into slot_events and return the inserted event row.
+    Otherwise return None.
 
     Expected slot keys:
       venue_id, slot_date, start_time, end_time,
@@ -136,7 +137,7 @@ def upsert_slot_and_log_event(slot: dict) -> bool:
     if existing is None:
         ins = db.table("slots").insert(payload).execute()
         new_slot = ins.data[0]
-        db.table("slot_events").insert(
+        ev = db.table("slot_events").insert(
             {
                 "slot_id": new_slot["id"],
                 "venue_id": venue_id,
@@ -151,12 +152,12 @@ def upsert_slot_and_log_event(slot: dict) -> bool:
                 "spaces": slot.get("spaces"),
             }
         ).execute()
-        return True
+        return ev.data[0] if ev.data else None
 
     db.table("slots").update(payload).eq("id", existing["id"]).execute()
 
     if existing["status"] != slot["status"]:
-        db.table("slot_events").insert(
+        ev = db.table("slot_events").insert(
             {
                 "slot_id": existing["id"],
                 "venue_id": venue_id,
@@ -171,6 +172,78 @@ def upsert_slot_and_log_event(slot: dict) -> bool:
                 "spaces": slot.get("spaces"),
             }
         ).execute()
-        return True
+        return ev.data[0] if ev.data else None
 
-    return False
+    return None
+
+
+# --- Telegram subscriptions ----------------------------------------------
+
+def insert_subscription(sub: dict) -> dict:
+    db = get_db()
+    res = db.table("tg_subscriptions").insert(sub).execute()
+    return res.data[0]
+
+
+def list_subscriptions_for_chat(chat_id: int) -> list[dict]:
+    db = get_db()
+    res = (
+        db.table("tg_subscriptions")
+        .select("*")
+        .eq("chat_id", chat_id)
+        .eq("active", True)
+        .order("id")
+        .execute()
+    )
+    return res.data or []
+
+
+def deactivate_subscription(sub_id: int, chat_id: int) -> bool:
+    db = get_db()
+    res = (
+        db.table("tg_subscriptions")
+        .update({"active": False})
+        .eq("id", sub_id)
+        .eq("chat_id", chat_id)
+        .execute()
+    )
+    return bool(res.data)
+
+
+def find_matching_subscriptions(event: dict) -> list[dict]:
+    """Subscriptions whose criteria match a Booked->Available slot event."""
+    db = get_db()
+    res = (
+        db.table("tg_subscriptions")
+        .select("*")
+        .eq("active", True)
+        .contains("venue_ids", [event["venue_id"]])
+        .execute()
+    )
+    matches = []
+    start_t = event["start_time"][:5]  # HH:MM
+    iso_weekday = datetime.fromisoformat(event["slot_date"]).isoweekday()
+    for sub in res.data or []:
+        days = sub.get("days_of_week")
+        if days and iso_weekday not in days:
+            continue
+        tf = (sub.get("time_from") or "")[:5]
+        tt = (sub.get("time_to") or "")[:5]
+        if tf and start_t < tf:
+            continue
+        if tt and start_t >= tt:
+            continue
+        matches.append(sub)
+    return matches
+
+
+def record_notification(subscription_id: int, slot_event_id: int) -> bool:
+    """Returns True if newly inserted (i.e. should send), False if dedup hit."""
+    db = get_db()
+    try:
+        db.table("tg_notifications").insert(
+            {"subscription_id": subscription_id, "slot_event_id": slot_event_id}
+        ).execute()
+        return True
+    except Exception:
+        return False

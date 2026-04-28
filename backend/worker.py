@@ -31,6 +31,7 @@ from datetime import date, datetime, timedelta, timezone
 from dotenv import load_dotenv
 
 from db import get_active_venues, upsert_slot_and_log_event
+from notifier import notify_event
 from scrapers import scrape_better, scrape_clubspark
 
 load_dotenv()
@@ -78,10 +79,19 @@ def cycle(dates_ahead: int, only_venue: str | None) -> None:
             label = f"  {venue['id']:<18} {target_date}"
             try:
                 slots = scrape_one(venue, target_date)
-                events = sum(1 for s in slots if upsert_slot_and_log_event(s))
+                events = 0
+                notified = 0
+                for s in slots:
+                    ev = upsert_slot_and_log_event(s)
+                    if ev:
+                        events += 1
+                        notified += notify_event(ev)
                 total_slots += len(slots)
                 total_events += events
-                print(f"{label}  ok   slots={len(slots):<3} events={events}")
+                print(
+                    f"{label}  ok   slots={len(slots):<3} events={events} "
+                    f"notified={notified}"
+                )
             except Exception as exc:
                 print(f"{label}  FAIL {type(exc).__name__}: {exc}")
 

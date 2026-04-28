@@ -488,9 +488,90 @@ def refresh_lee_valley_snapshot_cache(date_value: str) -> dict:
     }
 
 
+def format_time_range(start: str, end: str) -> str:
+    return f"{start[:5]} - {end[:5]}"
+
+
+def format_price(price_pence: int | None) -> str | None:
+    if price_pence is None:
+        return None
+    pounds = price_pence / 100
+    return f"£{pounds:.2f}"
+
+
+def slot_row_to_record(row: dict) -> dict:
+    rec: dict = {
+        "timeRange": format_time_range(row["start_time"], row["end_time"]),
+        "status": row["status"],
+        "sourceStatus": row.get("source_status"),
+        "confidence": "high",
+    }
+    if row.get("court"):
+        rec["court"] = row["court"]
+    if row.get("activity"):
+        rec["activity"] = row["activity"]
+    if row.get("spaces") is not None:
+        rec["spaces"] = row["spaces"]
+    price = format_price(row.get("price_pence"))
+    if price:
+        rec["price"] = price
+    return rec
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/api/venues/{venue_id}/live-dates")
+def get_venue_live_dates(venue_id: str) -> dict:
+    from db import get_live_dates
+
+    venue = get_venue(venue_id)
+    dates = get_live_dates(venue_id)
+    return {
+        "venueId": venue_id,
+        "venueName": venue["name"],
+        "availableDates": dates,
+        "latestDate": dates[-1] if dates else None,
+    }
+
+
+@app.get("/api/venues/{venue_id}/live")
+def get_venue_live(
+    venue_id: str,
+    date: str | None = Query(default=None),
+) -> dict:
+    from db import get_latest_seen_at, get_live_dates, get_live_slots
+
+    venue = get_venue(venue_id)
+    dates = get_live_dates(venue_id)
+    if not dates:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No live slot data found for {venue_id}",
+        )
+    selected_date = validate_date_string(date or dates[-1])
+    rows = get_live_slots(venue_id, selected_date)
+    records = [slot_row_to_record(r) for r in rows]
+    last_seen = get_latest_seen_at(venue_id, selected_date)
+
+    return {
+        "meta": {
+            "venueId": venue_id,
+            "venueName": venue["name"],
+            "source": "Supabase live worker (cached snapshot from poller)",
+            "checkedDate": selected_date,
+            "sourceUrl": venue.get("officialBookingUrl"),
+            "lastCheckedAt": last_seen,
+            "isLive": False,
+            "disclaimer": (
+                "Cached snapshot data only. Not live availability. "
+                "Always confirm and book through the official venue booking page."
+            ),
+        },
+        "records": records,
+    }
 
 
 @app.get("/api/venues")

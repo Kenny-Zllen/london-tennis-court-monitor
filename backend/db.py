@@ -39,6 +39,54 @@ def get_active_venues() -> list[dict]:
     return res.data or []
 
 
+def get_live_dates(venue_id: str) -> list[str]:
+    db = get_db()
+    res = (
+        db.table("slots")
+        .select("slot_date")
+        .eq("venue_id", venue_id)
+        .order("slot_date")
+        .execute()
+    )
+    seen: set[str] = set()
+    dates: list[str] = []
+    for row in res.data or []:
+        d = row["slot_date"]
+        if d not in seen:
+            seen.add(d)
+            dates.append(d)
+    return dates
+
+
+def get_live_slots(venue_id: str, slot_date: str) -> list[dict]:
+    db = get_db()
+    res = (
+        db.table("slots")
+        .select("*")
+        .eq("venue_id", venue_id)
+        .eq("slot_date", slot_date)
+        .order("start_time")
+        .execute()
+    )
+    return res.data or []
+
+
+def get_latest_seen_at(venue_id: str, slot_date: str) -> Optional[str]:
+    db = get_db()
+    res = (
+        db.table("slots")
+        .select("last_seen_at")
+        .eq("venue_id", venue_id)
+        .eq("slot_date", slot_date)
+        .order("last_seen_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if res.data:
+        return res.data[0]["last_seen_at"]
+    return None
+
+
 def upsert_slot_and_log_event(slot: dict) -> bool:
     """
     Upsert a normalized slot. If it is new or its status changed,

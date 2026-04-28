@@ -25,11 +25,27 @@ export async function fetchVenues() {
 }
 
 export async function fetchVenueSnapshotDates(venueId) {
+  try {
+    const live = await getJson(`/api/venues/${venueId}/live-dates`);
+    if (live.availableDates && live.availableDates.length) {
+      return live.availableDates;
+    }
+  } catch (err) {
+    // fall through to cached snapshot dates
+  }
   const data = await getJson(`/api/venues/${venueId}/snapshots`);
   return data.availableDates || [];
 }
 
 export async function fetchVenueSnapshot(venueId, date) {
   const query = date ? `?date=${encodeURIComponent(date)}` : "";
+  try {
+    const live = await getJson(`/api/venues/${venueId}/live${query}`);
+    if (live && live.records && live.records.length) {
+      return live;
+    }
+  } catch (err) {
+    // fall through to cached snapshot
+  }
   return getJson(`/api/venues/${venueId}/snapshot${query}`);
 }
